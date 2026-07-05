@@ -45,10 +45,13 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   },
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "apps/*"
+    ],
+    "catalog": {}
+  },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,cjs,mjs,cts,mts}": "biome check --write --no-errors-on-unmatched",
     "*.{md,yml,yaml}": "prettier --write",

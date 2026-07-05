@@ -392,4 +392,4 @@ Legacy env vars (`RESEND_API_KEY`, `SMTP_HOST`, etc.) are also supported for bac
 
 ## License
 
-MIT © [Kumix Inc.](../../LICENSE)
+MIT © [Kumix Labs](../../LICENSE)

@@ -20,8 +20,8 @@ Kumix Toolkits is a community-driven collection of packages that standardize com
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) 1.3.9 or higher
-- Node.js 22 or higher
+- [Bun](https://bun.sh) 1.3.14 or higher
+- Node.js 24 or higher
 - Git
 
 ### Setup
@@ -220,7 +220,7 @@ Make sure:
 1. Create a new directory in `packages/`
 2. Copy the structure from an existing package (`packages/email`, `packages/storage`, or `packages/utils`)
 3. Update `package.json` with appropriate metadata and workspace name (e.g., `@kumix/<name>`)
-4. Create `tsup.config.ts` for build configuration
+4. Create `tsdown.config.ts` for build configuration
 5. Add TypeScript configuration (`tsconfig.json`)
 6. Add the package to the workspace (Turborepo and root `workspaces` already include `packages/*`)
 
@@ -233,7 +233,7 @@ packages/your-package/
 │   ├── types.ts          # Type definitions
 │   └── ...
 ├── package.json          # Package metadata
-├── tsup.config.ts        # Build configuration
+├── tsdown.config.ts      # Build configuration
 ├── tsconfig.json         # TypeScript configuration
 ├── .env.example          # Environment variables (if needed)
 └── README.md             # Package documentation

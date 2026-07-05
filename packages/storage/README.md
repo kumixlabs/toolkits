@@ -22,9 +22,9 @@ npm install cloudinary  # For Cloudinary
 ### S3-Compatible Storage (AWS, R2, MinIO, etc.)
 
 ```typescript
-import { S3Storage } from "@kumix/storage/s3";
+import { S3Service } from "@kumix/storage/s3";
 
-const storage = new S3Storage({
+const storage = new S3Service({
   provider: "aws", // or 'cloudflare-r2', 'minio', 'digitalocean', 'supabase'
   region: "us-east-1",
   bucket: "my-bucket",
@@ -53,9 +53,9 @@ const url = await storage.getPresignedUrl({
 ### Cloudinary Storage
 
 ```typescript
-import { CloudinaryStorage } from "@kumix/storage/cloudinary";
+import { CloudinaryService } from "@kumix/storage/cloudinary";
 
-const storage = new CloudinaryStorage({
+const storage = new CloudinaryService({
   provider: "cloudinary",
   cloudName: process.env.CLOUDINARY_CLOUD_NAME,
   apiKey: process.env.CLOUDINARY_API_KEY,
@@ -101,7 +101,7 @@ await storage.upload({
 ### AWS S3
 
 ```typescript
-const storage = new S3Storage({
+const storage = new S3Service({
   provider: "aws",
   region: "us-east-1",
   bucket: "my-bucket",
@@ -114,7 +114,7 @@ const storage = new S3Storage({
 ### Cloudflare R2
 
 ```typescript
-const storage = new S3Storage({
+const storage = new S3Service({
   provider: "cloudflare-r2",
   region: "auto",
   bucket: "my-bucket",
@@ -127,7 +127,7 @@ const storage = new S3Storage({
 ### MinIO
 
 ```typescript
-const storage = new S3Storage({
+const storage = new S3Service({
   provider: "minio",
   region: "us-east-1",
   bucket: "my-bucket",
@@ -288,4 +288,4 @@ const cloudinary = createCloudinary({ provider: "cloudinary", cloudName: "...", 
 
 ## License
 
-MIT © [Kumix Inc.](../../LICENSE)
+MIT © [Kumix Labs](../../LICENSE)

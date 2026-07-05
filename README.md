@@ -3,26 +3,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Bun](https://img.shields.io/badge/bun-1.3.14-black)](https://bun.sh)
 
-A collection of ready-to-use packages for modern application development. This monorepo includes reusable packages for email, storage, common utilities, and shared linting/TypeScript configurations.
+A collection of ready-to-use packages for modern application development. This monorepo includes reusable packages for email, storage, and common utilities.
 
 ## Packages
 
-| Package                                                             | Version                                                                                                                         | Description                                                 |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| [@kumix/email](./packages/email)                                    | [![npm](https://img.shields.io/npm/v/@kumix/email.svg)](https://www.npmjs.com/package/@kumix/email)                             | Email templates and sending utilities (Resend, Nodemailer)  |
-| [@kumix/storage](./packages/storage)                                | [![npm](https://img.shields.io/npm/v/@kumix/storage.svg)](https://www.npmjs.com/package/@kumix/storage)                         | Unified storage interface (S3, Cloudinary, R2, MinIO, etc.) |
-| [@kumix/utils](./packages/utils)                                    | [![npm](https://img.shields.io/npm/v/@kumix/utils.svg)](https://www.npmjs.com/package/@kumix/utils)                             | Common utility functions for SaaS applications              |
-| [@kumix/biome-config](./packages/config/biome)                      | [![npm](https://img.shields.io/npm/v/@kumix/biome-config.svg)](https://www.npmjs.com/package/@kumix/biome-config)               | Opinionated Biome config for lint/format                    |
-| [@kumix/eslint-config](./packages/config/eslint-config)             | [![npm](https://img.shields.io/npm/v/@kumix/eslint-config.svg)](https://www.npmjs.com/package/@kumix/eslint-config)             | Shared ESLint configuration                                 |
-| [@kumix/eslint-config-react](./packages/config/eslint-config-react) | [![npm](https://img.shields.io/npm/v/@kumix/eslint-config-react.svg)](https://www.npmjs.com/package/@kumix/eslint-config-react) | ESLint configuration for React                              |
-| [@kumix/eslint-config-vite](./packages/config/eslint-config-vite)   | [![npm](https://img.shields.io/npm/v/@kumix/eslint-config-vite.svg)](https://www.npmjs.com/package/@kumix/eslint-config-vite)   | ESLint configuration for Vite                               |
-| [@kumix/tsconfig](./packages/config/tsconfig)                       | [![npm](https://img.shields.io/npm/v/@kumix/tsconfig.svg)](https://www.npmjs.com/package/@kumix/tsconfig)                       | Extendable TypeScript configuration presets                 |
+| Package                              | Version                                                                                                 | Description                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [@kumix/email](./packages/email)     | [![npm](https://img.shields.io/npm/v/@kumix/email.svg)](https://www.npmjs.com/package/@kumix/email)     | Email templates and sending utilities (Resend, Nodemailer)  |
+| [@kumix/storage](./packages/storage) | [![npm](https://img.shields.io/npm/v/@kumix/storage.svg)](https://www.npmjs.com/package/@kumix/storage) | Unified storage interface (S3, Cloudinary, R2, MinIO, etc.) |
+| [@kumix/utils](./packages/utils)     | [![npm](https://img.shields.io/npm/v/@kumix/utils.svg)](https://www.npmjs.com/package/@kumix/utils)     | Common utility functions for SaaS applications              |
 
 ## Tech Stack
 
 - **Package Manager**: Bun
 - **Monorepo Tool**: Turborepo
-- **Build Tool**: tsup
+- **Build Tool**: tsdown
 - **Linting/Formatting**: Biome
 - **Language**: TypeScript
 
@@ -31,7 +26,7 @@ A collection of ready-to-use packages for modern application development. This m
 ### Prerequisites
 
 - [Bun](https://bun.sh) 1.3.14 or higher
-- Node.js 22 or higher
+- Node.js 24 or higher
 
 ### Installation
 

@@ -6,14 +6,12 @@ MCP server for exploring Kumix Toolkits packages, utilities, and documentation.
 
 This MCP server provides access to:
 
-- **8 packages** in the Kumix Toolkits
+- **3 packages** in the Kumix Toolkits
 - **Utility discovery** and search
 - **Source code reading** for development
 - **Usage examples** and documentation
 
 ## Available Packages
-
-### Toolkit Packages (3)
 
 - `@kumix/email` - Email templates and sending utilities
   - **Exports**: Main, `/components`, `/helpers`
@@ -26,28 +24,6 @@ This MCP server provides access to:
 - `@kumix/utils` - Comprehensive utility functions
   - **Exports**: Main, `/server` (Node.js only utilities)
   - **Categories**: string, url, datetime, crypto, validation, browser, array, analytics
-
-### Configuration Packages (5)
-
-- `@kumix/biome-config` - Shared Biome linting and formatting configuration
-  - **Exports**: `/base` - Base Biome configuration
-  - **Usage**: Extend in your project's biome.json or biome.jsonc
-
-- `@kumix/eslint-config` - Shared ESLint configuration
-  - **Exports**: Main - Base ESLint configuration
-  - **Usage**: Extend in your project's `eslint.config.js`
-
-- `@kumix/eslint-config-react` - ESLint configuration for React
-  - **Exports**: Main - React ESLint configuration
-  - **Usage**: Extend in your project's `eslint.config.js`
-
-- `@kumix/eslint-config-vite` - ESLint configuration for Vite
-  - **Exports**: Main - Vite ESLint configuration
-  - **Usage**: Extend in your project's `eslint.config.js`
-
-- `@kumix/tsconfig` - Shared TypeScript configuration
-  - **Exports**: Base TypeScript configuration
-  - **Usage**: Extend in your project's tsconfig.json
 
 ## Setup
 
@@ -140,7 +116,7 @@ Lists all available packages in the toolkits.
 
 **Parameters:**
 
-- `category` (optional): Filter by "email", "storage", "utils", "config", or "all" (default: "all")
+- `category` (optional): Filter by "email", "storage", "utils", or "all" (default: "all")
 
 **Example Prompts:**
 
@@ -148,7 +124,7 @@ Lists all available packages in the toolkits.
 Show me all available packages.
 List all email packages only.
 What storage packages are available?
-Show me configuration packages.
+Show me the utils package.
 ```
 
 ### 2. `get_package_info`
@@ -182,7 +158,7 @@ Searches for components across all packages.
 Find the slugify utility.
 Search for "storage" functions.
 Look for email components in the email package.
-Find the biome configuration files.
+Find the resizeImage utility in the utils package.
 ```
 
 ### 4. `read_component_code`
@@ -192,15 +168,14 @@ Reads the source code of a specific component.
 **Parameters:**
 
 - `package_name` (required): Package containing the component
-- `component_path` (required): Relative path from src/ directory (or from package root for config packages)
+- `component_path` (required): Relative path from the package's src/ directory
 
 **Example Prompts:**
 
 ```
 Show me the code for EmailService in the email package.
 Read the storage helper implementation.
-Display the biome configuration base file.
-Show me the Biome config base.jsonc.
+Show me the slugify implementation in the utils package.
 ```
 
 ### 5. `get_usage_example`
@@ -218,8 +193,6 @@ Gets usage examples for packages or components.
 Give me usage examples for the email package.
 How do I use the storage package?
 Show me examples for the utils package.
-How do I set up @kumix/biome-config?
-How do I use the eslint config?
 ```
 
 ## Usage Examples
@@ -273,9 +246,7 @@ Use the tools to discover and explore available packages:
 - **Email**: Email templates and sending utilities
 - **Storage**: Storage abstraction for multiple providers
 - **Utils**: Comprehensive utility functions
-- **Config**: Configuration packages (Biome, TypeScript)
 - Each package has its own `src/` directory with TypeScript files
-- Config packages are in their root directory
 
 ## Troubleshooting
 
@@ -308,11 +279,6 @@ Use the tools to discover and explore available packages:
      - `@kumix/email`
      - `@kumix/storage`
      - `@kumix/utils`
-     - `@kumix/biome-config`
-     - `@kumix/eslint-config`
-     - `@kumix/eslint-config-react`
-     - `@kumix/eslint-config-vite`
-     - `@kumix/tsconfig`
 
 ## File Structure Reference
 
@@ -343,12 +309,7 @@ packages/
 │   │   ├── url/          # URL utilities
 │   │   └── ...           # Other utility categories
 │   └── package.json
-└── config/               # Configuration packages
-    ├── biome/            # Biome configuration
-    │   ├── base.jsonc    # Base biome config
-    │   └── package.json
-    └── tsconfig/         # TypeScript configuration
-        └── package.json
+└── ...
 ```
 
 Each package contains:

@@ -50,10 +50,7 @@ class KumixToolkitsMCPServer {
           const packageJsonContent = await readFile(packageJsonPath, "utf-8");
           const packageJson = JSON.parse(packageJsonContent);
 
-          if (
-            packageJson.name?.startsWith("@kumix/") &&
-            packageJson.name !== "@kumix/mcp.toolkits"
-          ) {
+          if (packageJson.name?.startsWith("@kumix/") && packageJson.name !== "@kumix/mcp") {
             // Check if package has src directory
             const srcDir = join(packageDir, "src");
             let componentFiles: string[] = [];

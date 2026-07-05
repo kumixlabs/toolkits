@@ -1,4 +1,10 @@
 {
-  "extends": "@kumix/tsconfig/bun",
-  "include": ["src/**/*"]
+  "extends": "@kumix/tsconfig/base",
+  "compilerOptions": {
+    "types": ["bun", "node"],
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", ".turbo"]
 }

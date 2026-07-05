@@ -54,10 +54,10 @@ const short = truncate("Long text here...", 20); // "Long text here..."
 import {
   cn, // Tailwind-aware class merging
   capitalize, // Capitalize strings
-  camelCase, // Convert to camelCase
+  toCamelCase, // Convert snake_case to camelCase
   slugify, // Create URL-friendly slugs
   truncate, // Truncate text
-  smartTruncate, // Smart truncation (word-aware)
+  smartTruncate, // Smart truncation (URL-aware)
   pluralize, // Pluralize words
   getInitials, // Extract initials from names
 } from "@kumix/utils";
@@ -65,6 +65,7 @@ import {
 // Examples
 cn("text-sm", isActive && "font-bold"); // "text-sm font-bold"
 capitalize("hello world"); // "Hello world"
+toCamelCase("user_name"); // "userName"
 slugify("Hello World!"); // "hello-world"
 getInitials("John Doe"); // "JD"
 ```
@@ -77,7 +78,7 @@ import {
   formatDateTime,
   formatTime,
   timeAgo,
-  getDatetimeLocal,
+  getDateTimeLocal,
 } from "@kumix/utils";
 
 // Examples
@@ -113,7 +114,7 @@ isBusinessEmail("user@company.com"); // true
 ### Cryptography & IDs
 
 ```typescript
-import { nanoid, uid, cuid, hashString } from "@kumix/utils";
+import { nanoid, uid, cuid, hashStringSHA256 } from "@kumix/utils";
 
 // Generate IDs
 nanoid(); // "a1B2c3D" (7 chars, customizable)
@@ -121,8 +122,8 @@ nanoid(12); // "a1B2c3De5F6g" (12 chars)
 uid(); // "1732632000123" (timestamp-based)
 cuid(); // "clj5...abc" (collision-resistant)
 
-// Hash strings
-hashString("secret"); // "5en6G6MezRroT3..."
+// Hash strings (async, SHA-256 hex digest)
+await hashStringSHA256("secret"); // "2bb80d537b1da3e3..."
 ```
 
 ### URL Utilities
@@ -160,10 +161,10 @@ formatFileSize(1073741824); // "1 GB"
 ### Number Formatting
 
 ```typescript
-import { nformatter, currencyFormatter } from "@kumix/utils";
+import { nFormatter, currencyFormatter } from "@kumix/utils";
 
-nformatter(1234); // "1.2K"
-nformatter(1234567); // "1.2M"
+nFormatter(1234); // "1.2K"
+nFormatter(1234567); // "1.2M"
 currencyFormatter(1234.56); // "$1,234.56"
 ```
 
@@ -200,15 +201,22 @@ isIframeable("https://example.com"); // true/false
 ### Browser Utilities (Client-side only)
 
 ```typescript
-import { storage, cookies, getHeight, resizeImage } from "@kumix/utils";
+import {
+  setStorageItem,
+  getStorageItem,
+  setCookie,
+  getCookie,
+  getHeight,
+  resizeImage,
+} from "@kumix/utils";
 
 // localStorage wrapper
-storage.set("key", { value: "data" });
-const data = storage.get("key");
+setStorageItem("key", { value: "data" });
+const data = getStorageItem("key");
 
 // Cookie management
-cookies.set("name", "value", { maxAge: 3600 });
-const value = cookies.get("name");
+setCookie("name", "value", { maxAge: 3600 });
+const value = getCookie("name");
 
 // DOM utilities
 const height = getHeight(element);
@@ -264,4 +272,4 @@ import { ... } from '@kumix/utils/server';
 
 ## License
 
-MIT © [Kumix Inc.](../../LICENSE)
+MIT © [Kumix Labs](../../LICENSE)

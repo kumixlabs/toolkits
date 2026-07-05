@@ -5,7 +5,7 @@ Bun monorepo — Kumix Toolkits. Turborepo orchestrates, Biome lints/formats, Vi
 ## Commands
 
 ```bash
-bun run build          # turbo run build (dependsOn ^build) — tsup per package
+bun run build          # turbo run build (dependsOn ^build) — tsdown per package (mcp: tsc)
 bun run types:check    # turbo run types:check (dependsOn ^build — builds deps first, then tsc --noEmit)
 bun run lint           # biome check (root, NOT turbo)
 bun run lint:fix       # biome check --write --unsafe (root, NOT turbo)
@@ -30,7 +30,7 @@ Published packages are ESM-only, `type: module`, built with **tsdown** (`dts: tr
 - **`packages/utils`** (`@kumix/utils`) — Client + server utilities. Exports `.` and `./server` (server-only: JWT `jsonwebtoken`, bcrypt `bcryptjs`, `node:crypto`). Main entry is cross-runtime; constants guard `process.env` via `typeof process`, browser fns have SSR guards.
 - **`packages/email`** (`@kumix/email`) — Resend + Nodemailer. Exports `.`, `./components`, `./helpers`. Peers: `react >=18 || >=19-rc`, `react-email >=6`, `resend >=6.9`, `nodemailer >=8`. Nodemailer loaded via dynamic `await import()`; Resend works everywhere.
 - **`packages/storage`** (`@kumix/storage`) — S3/R2/MinIO/Spaces/Supabase + Cloudinary. Exports `.`, `./s3`, `./cloudinary`, `./helpers`. **All peerDeps optional** (`@aws-sdk/*`, `cloudinary`). `./s3` and `./cloudinary` are Node-only; main + `./helpers` are cross-runtime (helpers use `Uint8Array` not `Buffer`, Web Crypto fallback for hashing).
-- **`packages/mcp`** (`@kumix/mcp.toolkits`) — Private MCP server, NOT published (`private: true`), built with `tsc`. `bun run test` here runs `node dist/index.js --test`, so build first.
+- **`packages/mcp`** (`@kumix/mcp`) — Private MCP server, NOT published (`private: true`), built with `tsc`. `bun run test` here runs `node dist/index.js --test`, so build first.
 
 ### Cross-runtime `EnvRecord` pattern
 

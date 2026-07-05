@@ -1,0 +1,7 @@
+{
+  "extends": "@kumix/tsconfig/react",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["src/**/*"]
+}

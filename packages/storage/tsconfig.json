@@ -1,0 +1,4 @@
+{
+  "extends": "@kumix/tsconfig/bun",
+  "include": ["src/**/*"]
+}

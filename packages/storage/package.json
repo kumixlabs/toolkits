@@ -1,0 +1,94 @@
+{
+  "name": "@kumix/storage",
+  "version": "0.0.1",
+  "description": "Storage utilities for SaaS applications.",
+  "author": "Kumix Labs <hai@kumix.io>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./s3": {
+      "types": "./dist/s3.d.ts",
+      "import": "./dist/s3.js"
+    },
+    "./cloudinary": {
+      "types": "./dist/cloudinary.d.ts",
+      "import": "./dist/cloudinary.js"
+    },
+    "./helpers": {
+      "types": "./dist/helpers.d.ts",
+      "import": "./dist/helpers.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "clean:all": "rimraf .turbo coverage dist node_modules",
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "types:check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "homepage": "https://github.com/kumixlabs/toolkits",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kumixlabs/toolkits.git",
+    "directory": "packages/storage"
+  },
+  "bugs": {
+    "url": "https://github.com/kumixlabs/toolkits/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "kumix",
+    "storage",
+    "s3",
+    "cloudinary",
+    "minio",
+    "digitalocean",
+    "supabase"
+  ],
+  "dependencies": {
+    "mime-types": "^3.0.2"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1079.0",
+    "@aws-sdk/s3-request-presigner": "^3.1079.0",
+    "@kumix/tsconfig": "^0.1.0",
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^26.1.0",
+    "cloudinary": "^2.10.0",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-s3": ">=3.8.0",
+    "@aws-sdk/s3-request-presigner": ">=3.8.0",
+    "cloudinary": ">=2.8.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": {
+      "optional": true
+    },
+    "@aws-sdk/s3-request-presigner": {
+      "optional": true
+    },
+    "cloudinary": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  }
+}

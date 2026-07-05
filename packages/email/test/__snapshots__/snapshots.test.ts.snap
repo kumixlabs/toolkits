@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Snapshot Templates > should match snapshot for simple template 1`] = `"<html>mock-rendered-template</html>"`;
+
+exports[`Snapshot Templates > should match text snapshot after HTML-to-text conversion 1`] = `"mock-rendered-template"`;

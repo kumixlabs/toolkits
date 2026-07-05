@@ -1,0 +1,4 @@
+{
+  "extends": "@kumix/tsconfig/react",
+  "include": ["src/**/*"]
+}

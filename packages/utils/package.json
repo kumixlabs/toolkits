@@ -1,0 +1,73 @@
+{
+  "name": "@kumix/utils",
+  "version": "0.0.1",
+  "description": "A comprehensive library of utility functions for building modern SaaS applications.",
+  "author": "Kumix Labs <hai@kumix.io>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "clean:all": "rimraf .turbo coverage dist node_modules",
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "types:check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "homepage": "https://github.com/kumixlabs/toolkits",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kumixlabs/toolkits.git",
+    "directory": "packages/utils"
+  },
+  "bugs": {
+    "url": "https://github.com/kumixlabs/toolkits/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "kumix",
+    "utils"
+  ],
+  "dependencies": {
+    "@paralleldrive/cuid2": "^3.3.0",
+    "@sindresorhus/slugify": "^3.0.0",
+    "base-x": "^5.0.1",
+    "bcryptjs": "^3.0.3",
+    "chrono-node": "2.9.1",
+    "clsx": "^2.1.1",
+    "consola": "^3.4.2",
+    "jsonwebtoken": "^9.0.3",
+    "ms": "^2.1.3",
+    "nanoid": "^5.1.16",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@kumix/tsconfig": "^0.1.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/ms": "^2.1.0",
+    "@types/node": "^26.1.0",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  }
+}

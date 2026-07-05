@@ -1,0 +1,77 @@
+{
+  "name": "@kumix/email",
+  "version": "0.0.1",
+  "description": "Email templates and sending utilities for SaaS applications.",
+  "author": "Kumix Labs <hai@kumix.io>",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./components": {
+      "types": "./dist/components.d.ts",
+      "import": "./dist/components.js"
+    },
+    "./helpers": {
+      "types": "./dist/helpers.d.ts",
+      "import": "./dist/helpers.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "clean:all": "rimraf .turbo coverage dist node_modules",
+    "dev": "tsdown --watch",
+    "build": "tsdown",
+    "types:check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "homepage": "https://github.com/kumixlabs/toolkits",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kumixlabs/toolkits.git",
+    "directory": "packages/email"
+  },
+  "bugs": {
+    "url": "https://github.com/kumixlabs/toolkits/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "kumix",
+    "email",
+    "smtp",
+    "nodemailer",
+    "resend"
+  ],
+  "devDependencies": {
+    "@kumix/tsconfig": "^0.1.0",
+    "@types/node": "^26.1.0",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19.2.17",
+    "nodemailer": "^9.0.3",
+    "react": "^19.2.7",
+    "react-email": "^6.6.6",
+    "resend": "^6.17.1",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "nodemailer": ">=8.0.0",
+    "react": ">=18.0.0 || >=19.0.0-rc.0",
+    "react-email": ">=6.0.0",
+    "resend": ">=6.9.0"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  }
+}

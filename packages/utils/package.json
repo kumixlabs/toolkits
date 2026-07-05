@@ -1,6 +1,6 @@
 {
   "name": "@kumix/utils",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A comprehensive library of utility functions for building modern SaaS applications.",
   "author": "Kumix Labs <hai@kumix.io>",
   "license": "MIT",

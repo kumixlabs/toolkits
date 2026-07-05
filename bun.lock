@@ -29,7 +29,7 @@
     },
     "packages/email": {
       "name": "@kumix/email",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "devDependencies": {
         "@kumix/tsconfig": "^0.1.0",
         "@types/node": "^26.1.0",
@@ -51,9 +51,9 @@
     },
     "packages/mcp": {
       "name": "@kumix/mcp",
-      "version": "0.0.0",
+      "version": "0.0.1",
       "bin": {
-        "kumix-mcp-config": "dist/index.js",
+        "kumix-mcp-toolkits": "dist/index.js",
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.29.0",
@@ -67,7 +67,7 @@
     },
     "packages/storage": {
       "name": "@kumix/storage",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
         "mime-types": "^3.0.2",
       },
@@ -94,7 +94,7 @@
     },
     "packages/utils": {
       "name": "@kumix/utils",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
         "@paralleldrive/cuid2": "^3.3.0",
         "@sindresorhus/slugify": "^3.0.0",

@@ -1,5 +1,11 @@
 # @kumix/email
 
+## 0.1.1
+
+### Patch Changes
+
+- [`fb6c76d`](https://github.com/kumixlabs/toolkits/commit/fb6c76dbbf80af936474261161f1eb4acf920f59) Thanks [@kumixio](https://github.com/kumixio)! - Dynamic import for react/react-email/resend to prevent crashes on partial peer installs. Lazy Resend client initialization. Case-insensitive `SECURE` env parsing. Removed 6 unused deprecated email template types. Recipient sanitization in nodemailer provider.
+
 ## 0.1.0
 
 ### Minor Changes

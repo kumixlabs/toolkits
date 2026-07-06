@@ -43,8 +43,39 @@
  * ```
  */
 export const getTimeZones = (): { label: string; value: string }[] => {
-  // Fetch supported timezones
-  const timezones = Intl.supportedValuesOf("timeZone");
+  // `Intl.supportedValuesOf` is unavailable on older engines (e.g. Node <18.14,
+  // older Safari). Fall back to a small common list so the helper never throws.
+  const safeSupported = (): string[] => {
+    if (typeof Intl !== "undefined" && typeof Intl.supportedValuesOf === "function") {
+      try {
+        return Intl.supportedValuesOf("timeZone");
+      } catch {
+        // ignore — fall through
+      }
+    }
+    return [
+      "UTC",
+      "America/New_York",
+      "America/Los_Angeles",
+      "Europe/London",
+      "Europe/Paris",
+      "Asia/Tokyo",
+    ];
+  };
+
+  const timezones = safeSupported();
+
+  // Parse a "GMT[+|-]h(:mm)?" offset into a numeric value (minutes-from-UTC)
+  // so half/quarter-hour zones (e.g. +5:30, +5:45, -3:30) sort correctly.
+  // Previously `parseInt("5:30")` returned `5`, tying India with Uzbekistan.
+  const parseOffsetMinutes = (offset: string): number => {
+    const match = offset.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if (!match) return 0;
+    const sign = match[1] === "-" ? -1 : 1;
+    const hours = Number.parseInt(match[2] ?? "0", 10);
+    const minutes = Number.parseInt(match[3] ?? "0", 10);
+    return sign * (hours * 60 + minutes);
+  };
 
   return timezones
     .map((timezone) => {
@@ -59,7 +90,7 @@ export const getTimeZones = (): { label: string; value: string }[] => {
       return {
         value: timezone,
         label: `(${formattedOffset}) ${timezone.replace(/_/g, " ")}`,
-        numericOffset: parseInt(formattedOffset.replace("GMT", "").replace("+", "") || "0"),
+        numericOffset: parseOffsetMinutes(formattedOffset),
       };
     })
     .sort((a, b) => a.numericOffset - b.numericOffset);

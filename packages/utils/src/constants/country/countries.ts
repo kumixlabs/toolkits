@@ -330,33 +330,35 @@ export const COUNTRY_CODES = Object.keys(COUNTRIES) as [string, ...string[]];
  * }
  * ```
  */
+// EU member states (2020 onwards). The United Kingdom (GB) left the EU in
+// January 2020 (Brexit) and is intentionally excluded. Any EU-specific logic
+// (VAT/GDPR gating) requires this list to be accurate.
 export const EU_COUNTRY_CODES = [
   "AT",
   "BE",
   "BG",
+  "HR",
   "CY",
   "CZ",
-  "DE",
   "DK",
   "EE",
-  "ES",
   "FI",
   "FR",
-  "GB",
+  "DE",
   "GR",
-  "HR",
   "HU",
   "IE",
   "IT",
+  "LV",
   "LT",
   "LU",
-  "LV",
   "MT",
   "NL",
   "PL",
   "PT",
   "RO",
-  "SE",
-  "SI",
   "SK",
+  "SI",
+  "ES",
+  "SE",
 ];

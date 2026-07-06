@@ -80,18 +80,20 @@ export const googleTrackEvent = ({ name, properties }: EventProps) => {
 };
 
 /**
- * Helper function to safely get component name from path.
+ * Helper function to safely get the first path segment (component category)
+ * from a component path. For "ui/buttons/Button" this returns "ui".
  *
  * @param componentPath - Component path string
- * @returns Component name or original path if invalid
+ * @returns First segment of the path, or "unknown" if invalid
  */
 const getComponentName = (componentPath: string): string => {
   if (!componentPath || typeof componentPath !== "string") {
     return "unknown";
   }
-
-  const parts = componentPath.trim().split("/");
-  return parts.length > 1 ? parts[0] : componentPath.trim();
+  const trimmed = componentPath.trim();
+  if (!trimmed) return "unknown";
+  const firstSlash = trimmed.indexOf("/");
+  return firstSlash === -1 ? trimmed : trimmed.slice(0, firstSlash);
 };
 
 /**

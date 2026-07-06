@@ -170,6 +170,10 @@ await email.sendEmail({
 });
 ```
 
+> `nodemailer` is loaded via a dynamic `import()` and is a Node-oriented package. In Deno, install
+> it through an `npm:` specifier (`deno run --allow-env --allow-net ...` with
+> `npm:nodemailer@^9` resolvable). Bun and Node.js resolve it from `node_modules` automatically.
+
 ### Browser
 
 Use manual config — no env vars. Resend only, since Nodemailer requires Node.js APIs.
@@ -286,6 +290,33 @@ await email.sendEmail({
 });
 ```
 
+### Priority & Scheduled Delivery
+
+Both providers support a numeric `priority` (1 = highest … 5 = lowest). It is forwarded to
+Nodemailer as the `priority` field plus an `X-Priority` header, and to Resend as an `X-Priority`
+header.
+
+```typescript
+await email.sendEmail({
+  to: "oncall@example.com",
+  subject: "Incident",
+  html: "<p>High priority</p>",
+  priority: 1, // 1..5
+});
+```
+
+Resend also supports deferred delivery via `scheduledAt` (an ISO 8601 timestamp). It is forwarded
+as Resend's `scheduled_at` field. Nodemailer ignores this option.
+
+```typescript
+await email.sendEmail({
+  to: "user@example.com",
+  subject: "Scheduled",
+  html: "<p>Sent later</p>",
+  scheduledAt: new Date("2030-01-01T09:00:00Z"),
+});
+```
+
 ## Runtime Compatibility
 
 | Feature             | Node.js | Bun | CF Workers | Deno | Browser |
@@ -335,13 +366,13 @@ await email.sendEmail({
 
 - `renderEmailTemplate(Component, props)` — Render React component to HTML string
 - `htmlToText(html)` — Convert HTML to plain text
-- `isValidEmail(email)` — Validate email format (RFC 5322)
+- `isValidEmail(email)` — Validate common email format (permissive sanity check, not full RFC 5322)
 - `validateEmails(emails)` — Validate single or multiple emails
 - `filterValidEmails(emails)` — Filter invalid emails from a list
-- `formatEmailAddress(name, email)` — Format as `Name <email>`
+- `formatEmailAddress(name, email)` — Format as `"Name" <email>` (display name is quoted/escaped per RFC 5322; CR/LF stripped to prevent header injection)
 - `extractEmail(formatted)` — Extract email from formatted address
 - `extractDisplayName(formatted)` — Extract display name from formatted address
-- `sanitizeHtml(html)` — Strip dangerous HTML (scripts, event handlers)
+- `sanitizeHtml(html)` — Coarse cleanup that strips `<script>`/`<style>`/`<iframe>`/`<object>`/`<embed>`/`<form>`/`<svg>` blocks, `on*` event handlers, and `javascript:` URLs. ⚠️ **NOT a security sanitizer** — for untrusted input use a purpose-built sanitizer (e.g. DOMPurify)
 - `truncateText(text, maxLength, ellipsis?)` — Truncate with ellipsis
 - `generatePreviewText(html, maxLength?)` — Generate email preview text
 - `generateUnsubscribeLink(baseUrl, email, token?)` — Create unsubscribe URL
@@ -357,14 +388,21 @@ await email.sendEmail({
 
 ```typescript
 import type {
+  // Config shapes
   EmailConfig,
   ResendConfig,
   NodemailerConfig,
-  SendEmailOptions,
-  EmailResult,
+  BaseEmailConfig,
   EmailProvider,
   EnvRecord,
-  // ... and more
+  // Sending
+  SendEmailOptions,
+  EmailAttachment,
+  EmailResult,
+  EmailValidationResult,
+  IEmailProvider,
+  ConfigValidationResult,
+  EmailTemplateData,
 } from "@kumix/email";
 ```
 
@@ -379,8 +417,12 @@ import type {
 | `KUMIX_EMAIL_SMTP_HOST`      | Nodemailer | Yes      |
 | `KUMIX_EMAIL_SMTP_PORT`      | Nodemailer | Yes      |
 | `KUMIX_EMAIL_SMTP_SECURE`    | Nodemailer | No       |
-| `KUMIX_EMAIL_SMTP_USER`      | Nodemailer | Yes      |
-| `KUMIX_EMAIL_SMTP_PASS`      | Nodemailer | Yes      |
+
+`KUMIX_EMAIL_SMTP_SECURE` enables TLS when set to `true`, `1`, or `yes` (case-insensitive); any
+other value (or unset) leaves the connection unsecured. Defaults to off — set it explicitly for
+port 465 (implicit TLS).
+| `KUMIX_EMAIL_SMTP_USER` | Nodemailer | Yes |
+| `KUMIX_EMAIL_SMTP_PASS` | Nodemailer | Yes |
 
 Legacy env vars (`RESEND_API_KEY`, `SMTP_HOST`, etc.) are also supported for backward compatibility.
 

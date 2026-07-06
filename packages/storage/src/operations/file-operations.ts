@@ -63,7 +63,12 @@ export class FileOperations {
         Metadata: options.metadata,
         CacheControl: options.cacheControl,
         ContentDisposition: options.contentDisposition,
-        ACL: options.acl,
+        // R2, MinIO, and Supabase reject canned ACLs. Only apply an ACL when the
+        // caller explicitly set one AND the provider supports it (aws/digitalocean).
+        ...(options.acl &&
+        (this.config.provider === "aws" || this.config.provider === "digitalocean")
+          ? { ACL: options.acl }
+          : {}),
         Expires: options.expires,
       });
 
@@ -177,7 +182,11 @@ export class FileOperations {
         })) || [];
 
       return {
-        success: true,
+        // Partial failures: S3 returns `result.Errors` for objects it could not
+        // delete. Treat the operation as failed when any per-key error exists
+        // so callers using `if (result.success)` don't silently miss that some
+        // objects remain. The full per-key breakdown is still on `errors`/`deleted`.
+        success: errors.length === 0,
         deleted,
         errors: errors.length > 0 ? errors : undefined,
       };
@@ -264,7 +273,11 @@ export class FileOperations {
     try {
       const command = new CopyObjectCommand({
         Bucket: this.config.bucket,
-        CopySource: `${this.config.bucket}/${options.sourceKey}`,
+        // CopySource must be percent-encoded; keys containing `?`, `&`, `=`,
+        // `+`, spaces, or non-ASCII would otherwise break the copy request.
+        // Encode each path segment so `/` separators survive while reserved
+        // chars within a segment are escaped.
+        CopySource: `${this.config.bucket}/${options.sourceKey.split("/").map(encodeURIComponent).join("/")}`,
         Key: options.destinationKey,
         Metadata: options.metadata,
         MetadataDirective: options.metadataDirective || "COPY",
@@ -380,7 +393,17 @@ export class FileOperations {
       return buildPublicUrl(this.config.endpoint, this.config.bucket, key, isSupabase);
     }
 
-    // Default AWS S3 URL format
+    // MinIO is self-hosted and does not expose objects at the AWS URL format —
+    // synthesizing one would just produce a 404 the caller can't distinguish
+    // from a real miss. Surface the misconfiguration explicitly instead.
+    if (this.config.provider === "minio") {
+      throw new Error(
+        "MinIO public URL could not be built: set `publicUrl` (or `endpoint`) on the S3 config " +
+          "to a publicly reachable base, since MinIO has no default public host.",
+      );
+    }
+
+    // Default AWS / DigitalOcean Spaces URL format
     return `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/${key}`;
   }
 }

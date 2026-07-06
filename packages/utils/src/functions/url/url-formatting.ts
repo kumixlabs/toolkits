@@ -45,11 +45,11 @@
  */
 export const getPrettyUrl = (url?: string | null): string => {
   if (!url) return "";
-  // remove protocol (http/https) and www.
+  // remove protocol (http/https) and the leading www. host label only.
   // also remove trailing slash
   return url
     .replace(/(^\w+:|^)\/\//, "")
-    .replace("www.", "")
+    .replace(/^www\./, "")
     .replace(/\/$/, "");
 };
 

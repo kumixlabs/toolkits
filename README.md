@@ -48,13 +48,13 @@ bun run build              # Build all packages
 bun run types:check        # Type-check all packages
 
 # Linting & Formatting (Biome)
-bun run lint               # Lint with safe fixes
-bun run lint:fix           # Lint with comprehensive fixes
+bun run lint               # Check for lint issues
+bun run lint:fix           # Lint with auto-fixes
 bun run format             # Format code
 
 # Testing
 bun run test               # Run all tests
-bun run test -- --run email  # Run one package's tests
+bun run test --filter @kumix/email  # Run one package's tests
 
 # Maintenance
 bun run clean              # Clean build outputs
@@ -97,7 +97,7 @@ We welcome contributions! This project is community-driven and your help makes i
 
 ## Security
 
-If you discover a security vulnerability, please email **kumixdev@gmail.com**. All vulnerabilities will be addressed promptly.
+If you discover a security vulnerability, please email **hai@kumix.io**. All vulnerabilities will be addressed promptly.
 
 Do not report security issues through public GitHub issues.
 

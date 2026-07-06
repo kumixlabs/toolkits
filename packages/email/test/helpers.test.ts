@@ -50,21 +50,24 @@ describe("Email Helpers", () => {
       const html = "<h1>Hello</h1><p>Welcome to our <strong>platform</strong>!</p>";
       const text = htmlToText(html);
 
-      expect(text).toBe("Hello Welcome to our platform !");
+      // Block boundaries (`</h1>`, `</p>`) are preserved as newlines.
+      expect(text).toBe("Hello\n\nWelcome to our platform !");
     });
 
     it("should handle <br> tags correctly", () => {
       const html = "Line 1<br>Line 2<br/>Line 3";
       const text = htmlToText(html);
 
-      expect(text).toBe("Line 1 Line 2 Line 3");
+      // `<br>` becomes a single newline.
+      expect(text).toBe("Line 1\nLine 2\nLine 3");
     });
 
     it("should handle paragraph breaks", () => {
       const html = "<p>Paragraph 1</p><p>Paragraph 2</p>";
       const text = htmlToText(html);
 
-      expect(text).toBe("Paragraph 1 Paragraph 2");
+      // `</p>` becomes a double newline (paragraph break).
+      expect(text).toBe("Paragraph 1\n\nParagraph 2");
     });
 
     it("should handle headings", () => {
@@ -129,7 +132,23 @@ describe("Email Helpers", () => {
   describe("Email Formatting", () => {
     it("should format email with display name", () => {
       const formatted = formatEmailAddress("John Doe", "john@example.com");
-      expect(formatted).toBe("John Doe <john@example.com>");
+      // Display name is quoted and escaped per RFC 5322.
+      expect(formatted).toBe('"John Doe" <john@example.com>');
+    });
+
+    it("should escape special characters in display name", () => {
+      // Embedded quotes and backslashes are escaped.
+      expect(formatEmailAddress('John "JD" Doe', "john@example.com")).toBe(
+        '"John \\"JD\\" Doe" <john@example.com>',
+      );
+      expect(formatEmailAddress("a\\b", "john@example.com")).toBe('"a\\\\b" <john@example.com>');
+    });
+
+    it("should strip CR/LF from name and email", () => {
+      const formatted = formatEmailAddress("John\r\nDoe", "john@example.com");
+      expect(formatted).toBe('"JohnDoe" <john@example.com>');
+      expect(formatted).not.toContain("\r");
+      expect(formatted).not.toContain("\n");
     });
 
     it("should extract email from formatted address", () => {
@@ -193,7 +212,10 @@ describe("Email Helpers", () => {
       const html = "<h1>Welcome!</h1><p>Thank you for joining our platform.</p>";
       const preview = generatePreviewText(html, 30);
 
-      expect(preview).toBe("Welcome! Thank you for join...");
+      // htmlToText now preserves block boundaries (`</h1>`, `</p>`) as
+      // newlines, so the preview retains the heading/paragraph breaks before
+      // being truncated to the requested length.
+      expect(preview).toBe("Welcome!\n\nThank you for joi...");
       expect(preview.length).toBe(30);
     });
   });

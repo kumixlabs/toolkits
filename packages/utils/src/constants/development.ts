@@ -20,7 +20,7 @@ import { getEnv } from "../env";
  *
  * // Environment-specific configuration
  * const apiUrl = NODE_ENV === 'production'
- *   ? 'https://api.kumix.com'
+ *   ? 'https://api.kumix.io'
  *   : 'http://localhost:3001';
  * ```
  */
@@ -53,10 +53,13 @@ export const NODE_ENV = getEnv("NODE_ENV");
 export const isDevelopment = NODE_ENV === "development";
 
 /**
- * Checks if the application is running in staging mode
+ * Checks if the application is running in staging mode.
  * Used for testing production-like environments before deployment.
  *
- * @returns True if NODE_ENV is 'test', false otherwise
+ * Maps to `NODE_ENV === "staging"`. Note: the test runner (Vitest/Jest) sets
+ * `NODE_ENV=test`; for that case see `isTest`.
+ *
+ * @returns True if NODE_ENV is 'staging', false otherwise
  *
  * @example
  * ```ts
@@ -64,17 +67,17 @@ export const isDevelopment = NODE_ENV === "development";
  *
  * if (isStaging) {
  *   // Use staging API endpoints
- *   apiUrl = 'https://staging-api.kumix.com';
+ *   apiUrl = 'https://staging-api.kumix.io';
  * }
- *
- * // Staging-specific analytics
- * const analyticsConfig = {
- *   enabled: isStaging || isProduction,
- *   debug: isStaging
- * };
  * ```
  */
-export const isStaging = NODE_ENV === "test";
+export const isStaging = NODE_ENV === "staging";
+
+/**
+ * Checks if the application is running under the test runner (Vitest/Jest).
+ * Both runners set `NODE_ENV=test`.
+ */
+export const isTest = NODE_ENV === "test";
 
 /**
  * Checks if the application is running in production mode

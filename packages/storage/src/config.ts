@@ -43,6 +43,7 @@ export const ENV_VARS = {
   KUMIX_S3_BUCKET: "KUMIX_S3_BUCKET",
   KUMIX_S3_ACCESS_KEY_ID: "KUMIX_S3_ACCESS_KEY_ID",
   KUMIX_S3_SECRET_ACCESS_KEY: "KUMIX_S3_SECRET_ACCESS_KEY",
+  KUMIX_S3_SESSION_TOKEN: "KUMIX_S3_SESSION_TOKEN",
   KUMIX_S3_ENDPOINT: "KUMIX_S3_ENDPOINT",
   KUMIX_S3_FORCE_PATH_STYLE: "KUMIX_S3_FORCE_PATH_STYLE",
   KUMIX_S3_PUBLIC_URL: "KUMIX_S3_PUBLIC_URL",
@@ -128,7 +129,7 @@ function getBooleanEnvVar(key: string, defaultValue = false, env?: EnvRecord): b
  * ```
  */
 export function loadS3Config(env?: EnvRecord): S3Config {
-  const provider = getRequiredEnvVar(ENV_VARS.KUMIX_S3_PROVIDER, env) as S3Config["provider"];
+  const provider = (getEnvVar(ENV_VARS.KUMIX_S3_PROVIDER, env) || "aws") as S3Config["provider"];
 
   // Validate provider
   const validProviders: S3Config["provider"][] = [
@@ -151,6 +152,7 @@ export function loadS3Config(env?: EnvRecord): S3Config {
     bucket: getRequiredEnvVar(ENV_VARS.KUMIX_S3_BUCKET, env),
     accessKeyId: getRequiredEnvVar(ENV_VARS.KUMIX_S3_ACCESS_KEY_ID, env),
     secretAccessKey: getRequiredEnvVar(ENV_VARS.KUMIX_S3_SECRET_ACCESS_KEY, env),
+    sessionToken: getEnvVar(ENV_VARS.KUMIX_S3_SESSION_TOKEN, env),
     endpoint: getEnvVar(ENV_VARS.KUMIX_S3_ENDPOINT, env),
     forcePathStyle: getBooleanEnvVar(ENV_VARS.KUMIX_S3_FORCE_PATH_STYLE, false, env),
     publicUrl: getEnvVar(ENV_VARS.KUMIX_S3_PUBLIC_URL, env),
@@ -258,11 +260,7 @@ export function loadStorageConfig(env?: EnvRecord): StorageConfig {
   }
   if (hasS3Vars) {
     // Default to AWS if no provider specified
-    const config = loadS3Config(env);
-    if (!config.provider) {
-      config.provider = "aws";
-    }
-    return config;
+    return loadS3Config(env);
   }
 
   throw new Error(
@@ -405,7 +403,6 @@ export function validateS3EnvVars(env?: EnvRecord): {
   missing: string[];
 } {
   const required = [
-    ENV_VARS.KUMIX_S3_PROVIDER,
     ENV_VARS.KUMIX_S3_REGION,
     ENV_VARS.KUMIX_S3_BUCKET,
     ENV_VARS.KUMIX_S3_ACCESS_KEY_ID,
@@ -481,12 +478,29 @@ export function validateCloudinaryEnvVars(env?: EnvRecord): {
 export function getStorageEnvVars(env?: EnvRecord): Record<string, string | undefined> {
   const result: Record<string, string | undefined> = {};
 
+  // Mask any value whose key looks like a credential. Previously only
+  // SECRET/​API_SECRET values were masked, leaking the S3 access key ID and the
+  // Cloudinary API key in plaintext. We now also redact *_KEY_ID, *_API_KEY,
+  // *ACCESS_KEY_ID, *SECRET_ACCESS_KEY, *TOKEN, and *PASSWORD.
+  const SENSITIVE_PATTERNS = [
+    /SECRET/i,
+    /API_SECRET/i,
+    /API_KEY/i,
+    /ACCESS_KEY_ID/i,
+    /SECRET_ACCESS_KEY/i,
+    /_KEY_ID$/i,
+    /TOKEN/i,
+    /PASSWORD/i,
+  ];
+  const isSensitive = (key: string) => SENSITIVE_PATTERNS.some((p) => p.test(key));
+
   Object.values(ENV_VARS).forEach((key) => {
     const value = getEnvVar(key, env);
     if (value) {
-      // Mask sensitive values
-      if (key.includes("SECRET") || key.includes("API_SECRET")) {
-        result[key] = `${value.substring(0, 4)}***`;
+      // Mask sensitive values. Indicate presence only — even partial prefixes
+      // leak meaningful information about short secrets.
+      if (isSensitive(key)) {
+        result[key] = "****";
       } else {
         result[key] = value;
       }

@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
+
 import {
   fetcher,
   fetcherSWR,
-  fetchWithTimeout,
   fetchWithRetry,
+  fetchWithTimeout,
   getClientIP,
-  isValidIP,
-  getUserAgent,
-  getRequestOrigin,
   getClientIPFromHeaders,
+  getRequestOrigin,
+  getUserAgent,
   getUserAgentFromHeaders,
+  isValidIP,
   parse,
 } from "../../src/index";
 
@@ -37,7 +38,7 @@ describe("HTTP", () => {
 
   it("fetchWithTimeout should reject on timeout", async () => {
     vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => { }));
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
     const p = fetchWithTimeout("/slow", undefined, 100);
     vi.advanceTimersByTime(100);
     await expect(p).rejects.toThrow("Request timed out");
@@ -54,16 +55,22 @@ describe("HTTP", () => {
       }
       return { ok: true, status: 200 } as any;
     });
-    const res = await fetchWithRetry("/retry", undefined, { maxRetries: 5, retryDelay: 10, timeout: 50 });
+    const res = await fetchWithRetry("/retry", undefined, {
+      maxRetries: 5,
+      retryDelay: 10,
+      timeout: 50,
+    });
     expect(res.ok).toBe(true);
     vi.restoreAllMocks();
   });
 
-  it("fetchWithRetry should throw unauthorized", async () => {
+  it("fetchWithRetry should throw forbidden for 403", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, status: 403 } as any);
-    await expect(fetchWithRetry("/unauth", undefined, { maxRetries: 1, retryDelay: 1, timeout: 10 })).rejects.toThrow(
-      "Unauthorized",
-    );
+    // 403 now surfaces as "Forbidden" (401 → "Unauthorized"). 401 and 403 are
+    // both treated as non-retryable auth errors.
+    await expect(
+      fetchWithRetry("/forbidden", undefined, { maxRetries: 1, retryDelay: 1, timeout: 10 }),
+    ).rejects.toThrow("Forbidden");
     vi.restoreAllMocks();
   });
 
@@ -100,6 +107,32 @@ describe("HTTP", () => {
     } as Record<string, string>;
     expect(getClientIPFromHeaders(headers)).toBe("2.2.2.2");
     expect(getUserAgentFromHeaders(headers)).toBe("Mozilla");
+  });
+
+  it("getClientIPFromHeaders falls through alt headers", () => {
+    expect(getClientIPFromHeaders({ "x-real-ip": "10.0.0.1" })).toBe("10.0.0.1");
+    expect(getClientIPFromHeaders({ "x-client-ip": "10.0.0.2" })).toBe("10.0.0.2");
+    expect(getClientIPFromHeaders({ "cf-connecting-ip": "10.0.0.3" })).toBe("10.0.0.3");
+    expect(getClientIPFromHeaders({ "x-cluster-client-ip": "10.0.0.4" })).toBe("10.0.0.4");
+    expect(getClientIPFromHeaders({ "x-real-ip": "  10.0.0.5  " })).toBe("10.0.0.5");
+    expect(getClientIPFromHeaders({ "x-real-ip": "unknown" })).toBe("unknown");
+  });
+
+  it("getClientIPFromHeaders parses RFC 7239 forwarded header", () => {
+    expect(getClientIPFromHeaders({ forwarded: "for=192.0.2.60;proto=https" })).toBe("192.0.2.60");
+    expect(getClientIPFromHeaders({ forwarded: "for=2001:db8::1" })).toBe("2001:db8::1");
+    expect(getClientIPFromHeaders({ forwarded: "for=unknown" })).toBe("unknown");
+  });
+
+  it("getClientIPFromHeaders returns unknown when nothing found", () => {
+    expect(getClientIPFromHeaders({})).toBe("unknown");
+    expect(getClientIPFromHeaders({ "x-forwarded-for": "unknown" })).toBe("unknown");
+  });
+
+  it("getClientIPFromHeaders handles array header values", () => {
+    expect(getClientIPFromHeaders({ "x-forwarded-for": ["4.4.4.4", "5.5.5.5"] } as any)).toBe(
+      "4.4.4.4",
+    );
   });
 
   it("getClientIP should parse forwarded header", () => {

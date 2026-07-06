@@ -16,23 +16,23 @@
  * ```ts
  * // Basic usage with defaults (USD)
  * currencyFormatter(1000)
- * // Returns "$1,000"
+ * // Returns "$1,000.00"
  *
  * // With custom currency
  * currencyFormatter(1000, {}, 'en-US', 'EUR')
- * // Returns "€1,000"
+ * // Returns "€1,000.00"
  *
  * // With custom locale
  * currencyFormatter(1000, {}, 'de-DE', 'EUR')
- * // Returns "1.000 €"
+ * // Returns "1.000,00 €"
  *
- * // With custom options
- * currencyFormatter(1234.56, { maximumFractionDigits: 2 })
- * // Returns "$1,234.56"
+ * // With custom options (no decimals)
+ * currencyFormatter(1234.56, { maximumFractionDigits: 0 })
+ * // Returns "$1,235"
  *
  * // Combining custom options, locale and currency
- * currencyFormatter(1234.56, { maximumFractionDigits: 2 }, 'ja-JP', 'JPY')
- * // Returns "￥1,235" (rounded to 0 decimal placeas by default for JPY)
+ * currencyFormatter(1234.56, { maximumFractionDigits: 0 }, 'ja-JP', 'JPY')
+ * // Returns "￥1,235"
  * ```
  */
 export const currencyFormatter = (
@@ -44,6 +44,5 @@ export const currencyFormatter = (
   Intl.NumberFormat(locale, {
     style: "currency",
     currency: currencyCode,
-    maximumFractionDigits: 0,
     ...options,
   }).format(value);

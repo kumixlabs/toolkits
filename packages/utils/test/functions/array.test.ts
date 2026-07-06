@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { chunk, randomValue, stableSort } from "../../src/index";
 
 describe("Array", () => {
@@ -14,10 +15,8 @@ describe("Array", () => {
 
   it("chunk should handle edge sizes", () => {
     const arr = [1, 2, 3];
-    expect(chunk(arr, 0).length).toBe(0);
-    const negativeChunk = chunk(arr, -1);
-    expect(negativeChunk.length).toBe(1);
-    expect(negativeChunk[0]).toEqual([1]);
+    expect(chunk(arr, 0)).toEqual([]);
+    expect(chunk(arr, -1)).toEqual([]);
   });
 
   it("randomValue returns element or undefined", () => {

@@ -98,7 +98,7 @@ describe("EmailService", () => {
       expect(typeof emailService.validateConfig).toBe("function");
     });
 
-    it("should return validation result", () => {
+    it("should return validation result", async () => {
       const config: EmailConfig = {
         provider: "resend",
         apiKey: "re_test_key",
@@ -110,9 +110,11 @@ describe("EmailService", () => {
 
       const emailService = new EmailService(config);
 
-      // Call the method to check it returns something
-      const result = emailService.validateConfig();
-      expect(typeof result).toBe("object");
+      // Call the method and await it. Previously this was not awaited, so the
+      // assertion only checked that the return value was a Promise (always an
+      // object) and would have passed even for a no-op implementation.
+      const result = await emailService.validateConfig();
+      expect(result).toEqual({ valid: true });
     });
   });
 
@@ -445,6 +447,29 @@ describe("EmailService", () => {
           from: { name: "Test", email: "test@example.com" },
         } as any);
       }).toThrow("Unsupported email provider: unsupported");
+    });
+  });
+
+  describe("getConfig isolation", () => {
+    it("should return a deep copy so callers cannot mutate internal config", () => {
+      const config: EmailConfig = {
+        provider: "resend",
+        apiKey: "re_test_key",
+        from: { name: "Original", email: "original@example.com" },
+      };
+      const emailService = new EmailService(config);
+
+      const snapshot = emailService.getConfig();
+      // Mutate the returned config's nested `from` object.
+      snapshot.from.name = "Mutated";
+      snapshot.from.email = "mutated@example.com";
+      if ("apiKey" in snapshot) snapshot.apiKey = "leaked";
+
+      // The service's internal config must be unaffected.
+      const again = emailService.getConfig();
+      expect(again.from.name).toBe("Original");
+      expect(again.from.email).toBe("original@example.com");
+      if ("apiKey" in again) expect(again.apiKey).toBe("re_test_key");
     });
   });
 });

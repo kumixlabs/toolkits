@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { formatFileSize } from "../../src/index";
 
 describe("File", () => {

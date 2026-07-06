@@ -59,9 +59,16 @@ export function nFormatter(
   }
 
   const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+  const digits = opts.digits ?? 1;
 
-  if (num < 1) {
-    return num.toFixed(opts.digits).replace(rx, "$1");
+  // Handle negative magnitudes by formatting the absolute value and re-applying
+  // the sign. Previously negatives with |num| >= 1000 collapsed to "0" because
+  // the lookup never matched (every value in `lookup` is positive).
+  const sign = num < 0 ? "-" : "";
+  const abs = Math.abs(num);
+
+  if (abs < 1) {
+    return `${sign}${abs.toFixed(digits).replace(rx, "$1")}`;
   }
 
   const lookup = [
@@ -76,6 +83,8 @@ export function nFormatter(
   const item = lookup
     .slice()
     .reverse()
-    .find((item) => num >= item.value);
-  return item ? (num / item.value).toFixed(opts.digits).replace(rx, "$1") + item.symbol : "0";
+    .find((item) => abs >= item.value);
+  return item
+    ? `${sign}${(abs / item.value).toFixed(digits).replace(rx, "$1")}${item.symbol}`
+    : "0";
 }

@@ -1,20 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
+
 import {
+  assetsUrl,
   capitalize,
-  truncate,
-  currencyFormatter,
   cn,
-  getInitials,
-  toCamelCase,
   combineWords,
+  currencyFormatter,
+  getFlagUrl,
+  getInitials,
   nFormatter,
   normalizeString,
   pluralize,
   regexEscape,
   smartTruncate,
+  toCamelCase,
   trim,
-  assetsUrl,
-  getFlagUrl,
+  truncate,
 } from "../../src/index";
 
 describe("String", () => {
@@ -32,7 +33,8 @@ describe("String", () => {
   });
 
   it("currencyFormatter should format currency", () => {
-    expect(currencyFormatter(1000)).toBe("$1,000");
+    // Default Intl currency formatting now keeps standard 2 fractional digits.
+    expect(currencyFormatter(1000)).toBe("$1,000.00");
     expect(currencyFormatter(1234.56, { maximumFractionDigits: 2 })).toBe("$1,234.56");
     const eur = currencyFormatter(1000, {}, "en-US", "EUR");
     expect(eur.includes("€")).toBe(true);

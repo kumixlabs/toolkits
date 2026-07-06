@@ -3,7 +3,7 @@
  * Provides secure random string generation for tokens, IDs, and other security-sensitive uses
  */
 
-import { randomBytes } from "node:crypto";
+import { randomInt } from "node:crypto";
 
 /**
  * Generates a cryptographically secure random string of specified length
@@ -31,11 +31,10 @@ import { randomBytes } from "node:crypto";
  */
 export function generateRandomString(length: number): string {
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const randomBytesArray = randomBytes(length);
   let result = "";
 
   for (let i = 0; i < length; i++) {
-    const randomIndex = randomBytesArray[i] % charset.length;
+    const randomIndex = randomInt(0, charset.length);
     result += charset[randomIndex];
   }
 

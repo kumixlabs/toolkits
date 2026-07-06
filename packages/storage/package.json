@@ -6,25 +6,24 @@
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "default": "./dist/index.js"
     },
     "./s3": {
       "types": "./dist/s3.d.ts",
-      "import": "./dist/s3.js"
+      "default": "./dist/s3.js"
     },
     "./cloudinary": {
       "types": "./dist/cloudinary.d.ts",
-      "import": "./dist/cloudinary.js"
+      "default": "./dist/cloudinary.js"
     },
     "./helpers": {
       "types": "./dist/helpers.d.ts",
-      "import": "./dist/helpers.js"
+      "default": "./dist/helpers.js"
     }
   },
   "scripts": {
@@ -58,14 +57,10 @@
     "digitalocean",
     "supabase"
   ],
-  "dependencies": {
-    "mime-types": "^3.0.2"
-  },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1079.0",
     "@aws-sdk/s3-request-presigner": "^3.1079.0",
     "@kumix/tsconfig": "^0.1.0",
-    "@types/mime-types": "^3.0.1",
     "@types/node": "^26.1.0",
     "cloudinary": "^2.10.0",
     "tsdown": "^0.22.3",

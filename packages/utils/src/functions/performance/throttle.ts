@@ -44,14 +44,14 @@
  * }, 1000);
  * ```
  */
-export const throttle = (
-  func: (...args: unknown[]) => void,
+export const throttle = <T extends (...args: never[]) => unknown>(
+  func: T,
   limit: number,
-): ((...args: unknown[]) => void) => {
+): ((...args: Parameters<T>) => void) => {
   let lastFunc: ReturnType<typeof setTimeout> | null = null;
   let lastRan: number | null = null;
 
-  return function (this: unknown, ...args: unknown[]) {
+  return function (this: unknown, ...args: Parameters<T>) {
     if (lastRan === null) {
       func.apply(this, args);
       lastRan = Date.now();

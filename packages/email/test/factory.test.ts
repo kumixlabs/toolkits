@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { EmailConfig, NodemailerConfig, ResendConfig } from "../src/index";
+import type { NodemailerConfig, ResendConfig } from "../src/index";
 import {
   createEmail,
   createNodemailer,
@@ -160,7 +160,7 @@ describe("Email Factory", () => {
     it("should throw error when no Resend config is found", () => {
       expect(() => createResend()).toThrow(
         "No Resend configuration found. Please provide config or set environment variables: " +
-        "KUMIX_EMAIL_RESEND_API_KEY, KUMIX_EMAIL_FROM_NAME, KUMIX_EMAIL_FROM_EMAIL",
+          "KUMIX_EMAIL_RESEND_API_KEY, KUMIX_EMAIL_FROM_NAME, KUMIX_EMAIL_FROM_EMAIL",
       );
     });
 
@@ -216,7 +216,7 @@ describe("Email Factory", () => {
     it("should throw error when no Nodemailer config is found", () => {
       expect(() => createNodemailer()).toThrow(
         "No Nodemailer configuration found. Please provide config or set environment variables: " +
-        "KUMIX_EMAIL_SMTP_HOST, KUMIX_EMAIL_SMTP_PORT, KUMIX_EMAIL_SMTP_USER, KUMIX_EMAIL_SMTP_PASS, KUMIX_EMAIL_FROM_NAME, KUMIX_EMAIL_FROM_EMAIL",
+          "KUMIX_EMAIL_SMTP_HOST, KUMIX_EMAIL_SMTP_PORT, KUMIX_EMAIL_SMTP_USER, KUMIX_EMAIL_SMTP_PASS, KUMIX_EMAIL_FROM_NAME, KUMIX_EMAIL_FROM_EMAIL",
       );
     });
 

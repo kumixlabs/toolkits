@@ -109,7 +109,7 @@ export function mapLocale(locale?: string): string | undefined {
  * Supports Open Graph, Twitter cards, icons, canonical URLs, robots, manifest, and multi-language alternates.
  *
  * @param params - Metadata construction options
- * @param params.baseUrl - The base URL/domain for metadataBase (optional, e.g., 'https://kumix.com')
+ * @param params.baseUrl - The base URL/domain for metadataBase (optional, e.g., 'https://kumix.io')
  * @param params.title - The base title for the page (used in Open Graph and Twitter)
  * @param params.fullTitle - The full title for the page (overrides title in the <title> tag)
  * @param params.description - Description of the page (used in meta, Open Graph, Twitter)
@@ -153,8 +153,8 @@ export function mapLocale(locale?: string): string | undefined {
  *     creator: '@lukmanaviccena',
  *   },
  *   alternateLanguages: {
- *     en: 'https://kumix.com/en',
- *     id: 'https://kumix.com/id',
+ *     en: 'https://kumix.io/en',
+ *     id: 'https://kumix.io/id',
  *   },
  *   icons: [
  *     { rel: 'icon', url: '/favicon.ico' },
@@ -226,8 +226,20 @@ export function constructMetadata({
   manifest,
   // biome-ignore lint/suspicious/noExplicitAny: disable
 }: metadataProps): Record<string, any> {
+  // Build metadataBase defensively: a malformed baseUrl (common in dev, e.g.
+  // NEXT_PUBLIC_SITE_URL="localhost:3000" without protocol) used to throw and
+  // 500 the page during Next.js metadata construction. Fall back to undefined.
+  let metadataBase: URL | undefined;
+  if (baseUrl) {
+    try {
+      metadataBase = new URL(baseUrl);
+    } catch {
+      metadataBase = undefined;
+    }
+  }
+
   return {
-    metadataBase: baseUrl ? new URL(baseUrl) : undefined,
+    metadataBase,
     title: fullTitle || title,
     description,
     icons,

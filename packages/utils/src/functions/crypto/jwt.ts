@@ -198,6 +198,8 @@ export function verifyJWT(
 
   try {
     const decoded = jwt.verify(token, secret, {
+      // Pin allowed algorithms to prevent alg-confusion / `alg: "none"` attacks.
+      algorithms: ["HS256"],
       ...(issuer && { issuer }),
       ...(audience && { audience }),
     }) as JWTPayload;
@@ -219,7 +221,7 @@ export function verifyJWT(
     if (error instanceof jwt.JsonWebTokenError) {
       return {
         isValid: false,
-        error: "Invalid token format",
+        error: "Invalid token",
       };
     }
 
@@ -264,8 +266,11 @@ export function decodeJWT(token: string): JWTPayload | null {
   }
 
   try {
-    const decoded = jwt.decode(token) as JWTPayload;
-    return decoded;
+    const decoded = jwt.decode(token);
+    if (!decoded || typeof decoded !== "object") {
+      return null;
+    }
+    return decoded as JWTPayload;
   } catch (error) {
     logger.warn("JWT decode: Failed to decode token", { error });
     return null;
@@ -301,7 +306,7 @@ export function isJWTExpired(token: string): boolean {
   }
 
   const currentTime = Math.floor(Date.now() / 1000);
-  return payload.exp < currentTime;
+  return payload.exp <= currentTime;
 }
 
 /**

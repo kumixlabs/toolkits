@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { S3Service, createS3 } from "../src/s3";
 import { CloudinaryService, createCloudinary } from "../src/cloudinary";
+import { createS3, S3Service } from "../src/s3";
 
 describe("Storage Services", () => {
   it("S3Service builds public URL using publicUrl", () => {
@@ -25,9 +25,7 @@ describe("Storage Services", () => {
       accessKeyId: "key",
       secretAccessKey: "secret",
     });
-    expect(s3.getPublicUrl("a/b.txt")).toBe(
-      "https://bucket.s3.us-east-1.amazonaws.com/a/b.txt",
-    );
+    expect(s3.getPublicUrl("a/b.txt")).toBe("https://bucket.s3.us-east-1.amazonaws.com/a/b.txt");
   });
 
   it("CloudinaryService exposes provider and config", () => {

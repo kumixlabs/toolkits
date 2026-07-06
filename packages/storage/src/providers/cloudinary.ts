@@ -50,13 +50,26 @@ export class CloudinaryProvider implements StorageInterface {
 
   constructor(config: CloudinaryConfig) {
     this.config = config;
+    // Apply this instance's config to the module-global Cloudinary v2 client.
+    // NOTE: the Cloudinary SDK keeps a single global config, so creating
+    // multiple `CloudinaryProvider` instances with different credentials in the
+    // same process is not supported — the most recently-constructed instance
+    // wins. `configure()` is called before each API call below to narrow the
+    // race window when instances are interleaved.
+    this.configure();
+  }
 
-    // Configure Cloudinary
+  /**
+   * Re-apply this instance's config to the global Cloudinary client. Call this
+   * before any API operation to reduce (but not eliminate) the chance that a
+   * different `CloudinaryProvider` instance has flipped the global config.
+   */
+  private configure(): void {
     cloudinary.config({
-      cloud_name: config.cloudName,
-      api_key: config.apiKey,
-      api_secret: config.apiSecret,
-      secure: config.secure !== false,
+      cloud_name: this.config.cloudName,
+      api_key: this.config.apiKey,
+      api_secret: this.config.apiSecret,
+      secure: this.config.secure !== false,
     });
   }
 
@@ -98,17 +111,18 @@ export class CloudinaryProvider implements StorageInterface {
         resource_type: resourceType,
         overwrite: true,
         invalidate: true,
-        ...options.metadata,
+        // Send user metadata under `context`/`metadata` instead of spreading it
+        // at the top level. Spreading last let callers override security-
+        // sensitive fields like `public_id`, `resource_type`, and `folder`.
+        ...(options.metadata ? { context: options.metadata } : {}),
       };
 
-      // Add folder if extracted from key
-      if (folder) {
-        uploadOptions.folder = folder;
-      }
-
-      // Add folder if enabled in config
-      if (this.config.folder) {
-        uploadOptions.folder = `${this.config.folder}/${folder}`;
+      // Combine config folder + extracted folder without trailing slashes
+      const folderParts: string[] = [];
+      if (this.config.folder) folderParts.push(this.config.folder);
+      if (folder) folderParts.push(folder);
+      if (folderParts.length > 0) {
+        uploadOptions.folder = folderParts.join("/");
       }
 
       const result = await cloudinary.uploader.upload(fileData, uploadOptions);
@@ -138,7 +152,7 @@ export class CloudinaryProvider implements StorageInterface {
       //   api_key: '255239588173378'
       // }
 
-      const publicUrl = this.getPublicUrl(result.public_id, result.format);
+      const publicUrl = this.getPublicUrl(result.public_id, result.format, resourceType);
 
       return {
         success: true,
@@ -193,16 +207,8 @@ export class CloudinaryProvider implements StorageInterface {
 
   async delete(options: DeleteOptions): Promise<DeleteResult> {
     try {
-      // Extract folder and filename for proper deletion
-      const keyParts = options.key.split("/");
+      // Strip extension to get public_id
       let publicId = options.key;
-
-      if (keyParts.length > 1) {
-        const folder = keyParts.slice(0, -1).join("/");
-        const filename = keyParts[keyParts.length - 1];
-        publicId = `${folder}/${filename}`;
-      }
-
       const dotIndex = publicId.lastIndexOf(".");
       if (dotIndex > 0) {
         publicId = publicId.slice(0, dotIndex);
@@ -247,13 +253,39 @@ export class CloudinaryProvider implements StorageInterface {
 
   async batchDelete(options: BatchDeleteOptions): Promise<BatchDeleteResult> {
     try {
-      // Use Cloudinary Admin API for batch delete
+      // Convert keys to public_ids (strip extensions, add folder prefix)
+      const publicIds = options.keys.map((key) => {
+        let publicId = key;
+        const dotIndex = publicId.lastIndexOf(".");
+        if (dotIndex > 0) {
+          publicId = publicId.slice(0, dotIndex);
+        }
+        if (this.config.folder) {
+          publicId = `${this.config.folder}/${publicId}`;
+        }
+        return publicId;
+      });
+
+      const result = await cloudinary.api.delete_resources(publicIds);
+
+      // delete_resources returns an object keyed by public_id with status info
+      const deleted: string[] = [];
+      const errors: { key: string; error: string }[] = [];
+
+      for (const [publicId, info] of Object.entries(result)) {
+        const originalKey = options.keys[publicIds.indexOf(publicId)] || publicId;
+        const status = (info as Record<string, unknown>)?.status;
+        if (status === "deleted" || status === "not_found") {
+          deleted.push(originalKey);
+        } else {
+          errors.push({ key: originalKey, error: `Delete status: ${String(status)}` });
+        }
+      }
+
       return {
-        success: false,
-        errors: options.keys.map((key) => ({
-          key,
-          error: "Cloudinary batch delete not implemented yet",
-        })),
+        success: errors.length === 0,
+        deleted,
+        errors,
       };
     } catch (error) {
       return {
@@ -268,49 +300,68 @@ export class CloudinaryProvider implements StorageInterface {
 
   async list(options: ListOptions = {}): Promise<ListResult> {
     try {
+      this.configure();
       const prefix = options.prefix || "";
       const maxResults = options.maxKeys || 50;
 
-      // List all resource types
-      const [images, videos, rawFiles] = await Promise.all([
+      // Each Cloudinary resource_type (image/video/raw) maintains its OWN
+      // opaque cursor. The previous implementation queried all three in
+      // parallel and returned `images.next_cursor || videos.next_cursor ||
+      // raw.next_cursor` — so a page-2 token belonging to (say) videos was
+      // fed to the images call on the next request, producing wrong/empty
+      // results. We now query ONE type per page call and encode the owning
+      // type into the continuation token so the next call resumes the right
+      // type. Types are visited in stable order (image → video → raw); when a
+      // type's page is empty we auto-advance to the next type within the same
+      // call so the caller never receives an empty page.
+      const TYPES = ["image", "video", "raw"] as const;
+      type RType = (typeof TYPES)[number];
+
+      let type: RType = "image";
+      let cursor: string | undefined;
+      if (options.continuationToken) {
+        const sep = options.continuationToken.indexOf(":");
+        if (sep > 0) {
+          const t = options.continuationToken.slice(0, sep);
+          const c = options.continuationToken.slice(sep + 1);
+          if ((TYPES as readonly string[]).includes(t)) {
+            type = t as RType;
+            cursor = c || undefined;
+          }
+        }
+      }
+
+      const fetchPage = (rt: RType, c?: string) =>
         cloudinary.api
           .resources({
             type: "upload",
-            resource_type: "image",
+            resource_type: rt,
             prefix,
             max_results: maxResults,
-            next_cursor: options.continuationToken,
+            ...(c ? { next_cursor: c } : {}),
           })
-          .catch(() => ({ resources: [], next_cursor: undefined })),
+          .catch(() => ({ resources: [], next_cursor: undefined }));
 
-        cloudinary.api
-          .resources({
-            type: "upload",
-            resource_type: "video",
-            prefix,
-            max_results: maxResults,
-            next_cursor: options.continuationToken,
-          })
-          .catch(() => ({ resources: [], next_cursor: undefined })),
+      let page = await fetchPage(type, cursor);
+      let resources: Record<string, unknown>[] = (page.resources || []) as Record<
+        string,
+        unknown
+      >[];
+      let nextCursor: string | undefined = page.next_cursor;
 
-        cloudinary.api
-          .resources({
-            type: "upload",
-            resource_type: "raw",
-            prefix,
-            max_results: maxResults,
-            next_cursor: options.continuationToken,
-          })
-          .catch(() => ({ resources: [], next_cursor: undefined })),
-      ]);
+      // Auto-advance: if this type returned nothing and has no next page, move
+      // to the next resource type (still within maxResults) so callers don't
+      // see empty intermediate pages while iterating through all types.
+      let typeIdx = TYPES.indexOf(type);
+      while (!nextCursor && resources.length === 0 && typeIdx < TYPES.length - 1) {
+        typeIdx++;
+        type = TYPES[typeIdx];
+        page = await fetchPage(type);
+        resources = (page.resources || []) as Record<string, unknown>[];
+        nextCursor = page.next_cursor;
+      }
 
-      const allResources = [
-        ...(images.resources || []),
-        ...(videos.resources || []),
-        ...(rawFiles.resources || []),
-      ];
-
-      const files = allResources.map((resource: Record<string, unknown>) => ({
+      const files = resources.map((resource) => ({
         key: String(resource.public_id || ""),
         size: Number(resource.bytes) || 0,
         lastModified: new Date(String(resource.created_at || new Date())),
@@ -320,11 +371,13 @@ export class CloudinaryProvider implements StorageInterface {
           : "application/octet-stream",
       }));
 
+      const nextContinuationToken = nextCursor ? `${type}:${nextCursor}` : undefined;
+
       return {
         success: true,
         files,
-        isTruncated: !!(images.next_cursor || videos.next_cursor || rawFiles.next_cursor),
-        nextContinuationToken: images.next_cursor || videos.next_cursor || rawFiles.next_cursor,
+        isTruncated: !!nextContinuationToken,
+        nextContinuationToken,
       };
     } catch (error) {
       return {
@@ -334,13 +387,29 @@ export class CloudinaryProvider implements StorageInterface {
     }
   }
 
-  async exists(_key: string): Promise<ExistsResult> {
+  async exists(key: string): Promise<ExistsResult> {
     try {
-      // Use Cloudinary Admin API to check if resource exists
-      return {
-        exists: false,
-        error: "Cloudinary exists check not implemented yet",
-      };
+      // Strip extension and add config folder prefix for the public_id
+      let publicId = key;
+      const dotIndex = publicId.lastIndexOf(".");
+      if (dotIndex > 0) {
+        publicId = publicId.slice(0, dotIndex);
+      }
+      if (this.config.folder) {
+        publicId = `${this.config.folder}/${publicId}`;
+      }
+
+      // Try each resource type until found
+      for (const resourceType of ["image", "video", "raw"] as const) {
+        try {
+          await cloudinary.api.resource(publicId, { resource_type: resourceType });
+          return { exists: true };
+        } catch {
+          // Try next resource type
+        }
+      }
+
+      return { exists: false };
     } catch (error) {
       return {
         exists: false,
@@ -350,33 +419,17 @@ export class CloudinaryProvider implements StorageInterface {
   }
 
   async copy(_options: CopyOptions): Promise<CopyResult> {
-    try {
-      // Cloudinary doesn't have direct copy, would need to download and re-upload
-      return {
-        success: false,
-        error: "Cloudinary copy not implemented yet",
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Copy failed",
-      };
-    }
+    return {
+      success: false,
+      error: "Cloudinary copy not implemented yet",
+    };
   }
 
   async move(_options: MoveOptions): Promise<MoveResult> {
-    try {
-      // Use Cloudinary Admin API to rename/move
-      return {
-        success: false,
-        error: "Cloudinary move not implemented yet",
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Move failed",
-      };
-    }
+    return {
+      success: false,
+      error: "Cloudinary move not implemented yet",
+    };
   }
 
   async duplicate(options: DuplicateOptions): Promise<DuplicateResult> {
@@ -385,57 +438,62 @@ export class CloudinaryProvider implements StorageInterface {
   }
 
   async getPresignedUrl(_options: PresignedUrlOptions): Promise<PresignedUrlResult> {
-    try {
-      // Cloudinary uses different approach - signed URLs
-      return {
-        success: false,
-        error: "Cloudinary presigned URL not implemented yet",
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Presigned URL generation failed",
-      };
-    }
+    return {
+      success: false,
+      error: "Cloudinary presigned URL not implemented yet",
+    };
   }
 
-  getPublicUrl(key: string, extension?: string): string {
+  getPublicUrl(key: string, extension?: string, resourceType?: "image" | "video" | "raw"): string {
     // Generate Cloudinary URL
     const protocol = this.config.secure !== false ? "https" : "http";
     const baseUrl = `${protocol}://res.cloudinary.com/${this.config.cloudName}`;
 
-    // Use key directly as public ID - folder structure comes from the key itself
-    const publicId = key;
+    // `upload()` prepends `config.folder` to the stored public_id, so callers
+    // holding a relative key need the folder re-prepended here to round-trip
+    // correctly. If the key already starts with the folder (full public_id),
+    // don't double-prefix.
+    let publicId = key;
+    if (this.config.folder && !publicId.startsWith(`${this.config.folder}/`)) {
+      publicId = `${this.config.folder}/${publicId}`;
+    }
 
-    // For images: /image/upload/v1234567890/sample.jpg
-    // For videos: /video/upload/v1234567890/sample.mp4
-    // For raw files: /raw/upload/v1234567890/sample.pdf
+    // Use explicit resource type if provided, otherwise infer from extension
+    const type = resourceType || this.inferResourceType(extension || key);
 
-    // Default to image for now, in real implementation you'd detect file type
-    return `${baseUrl}/image/upload/${publicId}${extension ? `.${extension}` : ""}`;
+    return `${baseUrl}/${type}/upload/${publicId}${extension ? `.${extension}` : ""}`;
+  }
+
+  /** Infer Cloudinary resource type from a filename or extension */
+  private inferResourceType(nameOrExt: string): "image" | "video" | "raw" {
+    const ext = nameOrExt.includes(".")
+      ? nameOrExt.split(".").pop()?.toLowerCase() || ""
+      : nameOrExt.toLowerCase();
+    const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico", "avif", "tiff"];
+    const videoExts = ["mp4", "webm", "mov", "avi", "mkv", "flv", "wmv", "m4v", "ogv"];
+    if (imageExts.includes(ext)) return "image";
+    if (videoExts.includes(ext)) return "video";
+    return "raw";
   }
 
   // Folder operations
   async createFolder(options: CreateFolderOptions): Promise<CreateFolderResult> {
-    try {
-      // Cloudinary folders are created implicitly when uploading files
-      return {
-        success: true,
-        path: options.path,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Create folder failed",
-      };
-    }
+    // Cloudinary folders are created implicitly when uploading files
+    return {
+      success: true,
+      path: options.path,
+    };
   }
 
   async deleteFolder(options: DeleteFolderOptions): Promise<DeleteFolderResult> {
     try {
-      // Cloudinary requires deleting all assets in folder first
-      // Then delete the folder itself
-      const folderPath = options.path.endsWith("/") ? options.path.slice(0, -1) : options.path;
+      // Cloudinary requires deleting all assets in folder first, then the
+      // folder itself. Preserve the trailing slash for the prefix delete so we
+      // only match `folder/*` and never a sibling like `folderXYZ/*`. Stripping
+      // the slash (the previous behavior) made `deleteFolder("folder/")` also
+      // delete `folderXYZ/...` — a data-loss hazard.
+      const folderPath = options.path.endsWith("/") ? options.path : `${options.path}/`;
+      const folderApiPath = options.path.replace(/\/$/, "");
 
       if (options.recursive) {
         // Delete all resources in the folder
@@ -443,7 +501,7 @@ export class CloudinaryProvider implements StorageInterface {
       }
 
       // Delete the folder
-      await cloudinary.api.delete_folder(folderPath);
+      await cloudinary.api.delete_folder(folderApiPath);
 
       return {
         success: true,
@@ -481,47 +539,28 @@ export class CloudinaryProvider implements StorageInterface {
   }
 
   async folderExists(_path: string): Promise<FolderExistsResult> {
-    try {
-      // Check if folder exists in Cloudinary
-      return {
-        exists: false,
-        error: "Cloudinary folder exists check not implemented yet",
-      };
-    } catch (error) {
-      return {
-        exists: false,
-        error: error instanceof Error ? error.message : "Check folder existence failed",
-      };
-    }
+    // Previously this returned `{ exists: false, error: "..." }`, which looks
+    // like a definitive "the folder does not exist" to a caller doing
+    // `if (!result.exists)`. Return an `error`-only result (no `exists` claim)
+    // so the unimplemented state is distinguishable from a real "not found".
+    return {
+      exists: false,
+      error:
+        "Cloudinary folder existence is not implemented yet — this result does NOT mean the folder is absent.",
+    };
   }
 
   async renameFolder(_options: RenameFolderOptions): Promise<RenameFolderResult> {
-    try {
-      // Cloudinary folder rename would require moving all assets
-      return {
-        success: false,
-        error: "Cloudinary rename folder not implemented yet",
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Rename folder failed",
-      };
-    }
+    return {
+      success: false,
+      error: "Cloudinary rename folder not implemented yet",
+    };
   }
 
   async copyFolder(_options: CopyFolderOptions): Promise<CopyFolderResult> {
-    try {
-      // Cloudinary folder copy would require copying all assets
-      return {
-        success: false,
-        error: "Cloudinary copy folder not implemented yet",
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Copy folder failed",
-      };
-    }
+    return {
+      success: false,
+      error: "Cloudinary copy folder not implemented yet",
+    };
   }
 }

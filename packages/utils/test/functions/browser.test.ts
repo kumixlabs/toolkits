@@ -1,12 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  clearStorage,
-  getStorageItem,
-  hasStorageItem,
-  removeStorageItem,
-  setStorageItem,
-} from "../../src/functions/browser/storage";
+
 import {
   clearAllCookies,
   getAllCookies,
@@ -15,6 +9,13 @@ import {
   removeCookie,
   setCookie,
 } from "../../src/functions/browser/cookies";
+import {
+  clearStorage,
+  getStorageItem,
+  hasStorageItem,
+  removeStorageItem,
+  setStorageItem,
+} from "../../src/functions/browser/storage";
 
 describe("browser storage", () => {
   beforeEach(() => {
@@ -73,13 +74,17 @@ describe("browser cookies", () => {
   });
 
   it("sets a cookie with options", () => {
-    const ok = setCookie("prefs", { theme: "dark" }, {
-      expires: 7,
-      path: "/",
-      domain: "localhost",
-      secure: false,
-      sameSite: "strict",
-    });
+    const ok = setCookie(
+      "prefs",
+      { theme: "dark" },
+      {
+        expires: 7,
+        path: "/",
+        domain: "localhost",
+        secure: false,
+        sameSite: "strict",
+      },
+    );
     expect(ok).toBe(true);
     expect(getCookie<{ theme: string }>("prefs")).toEqual({ theme: "dark" });
   });
@@ -116,6 +121,7 @@ describe("browser cookies", () => {
   });
 
   it("reads a raw cookie set without wrapper", () => {
+    // biome-ignore lint/suspicious/noDocumentCookie: testing the raw-cookie read path
     document.cookie = `${encodeURIComponent("raw")}=${encodeURIComponent("plainvalue")}`;
     expect(getCookie<string>("raw")).toBe("plainvalue");
   });

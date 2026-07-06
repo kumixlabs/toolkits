@@ -47,4 +47,7 @@ export const LOCALHOST_GEO_DATA = {
  * }
  * ```
  */
-export const LOCALHOST_IP = "63.141.57.109";
+// Use an RFC5737 TEST-NET address so dev/test IP lookups never hit a real
+// third-party service (the previous value 63.141.57.109 is a routable public
+// IP). TEST-NET 2 (198.51.100.0/24) is reserved for documentation/examples.
+export const LOCALHOST_IP = "198.51.100.1";

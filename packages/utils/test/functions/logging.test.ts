@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { logger, SlackLog } from "../../src/index";
 
 describe("Logging", () => {
@@ -29,7 +30,7 @@ describe("Logging", () => {
     process.env.SLACK_WEBHOOKS_HOOK_ALERTS = "https://example.com/webhook";
     const mod = await import("../../src/index");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
-    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => { });
+    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => {});
     await mod.SlackLog({ message: "error-case", type: "alerts" });
     expect(fetchSpy).toHaveBeenCalled();
     expect(logSpy).toHaveBeenCalled();
@@ -53,7 +54,7 @@ describe("Logging", () => {
     process.env.NODE_ENV = "development";
     const mod = await import("../../src/index");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true } as any);
-    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => { });
+    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => {});
     await mod.SlackLog({ message: "dev", type: "alerts" });
     expect(logSpy).toHaveBeenCalledWith("dev");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -65,14 +66,23 @@ describe("Logging", () => {
   it("SlackLog should include mention and alert for error type", async () => {
     vi.resetModules();
     process.env.NODE_ENV = "production";
+    // Mention user ID is no longer hardcoded — pass it explicitly (or set
+    // SLACK_MENTION_USER_ID). Here we pass it via the option.
+    delete process.env.SLACK_MENTION_USER_ID;
     process.env.SLACK_WEBHOOKS_HOOK_ERRORS = "https://example.com/webhook";
     const mod = await import("../../src/index");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true } as any);
-    await mod.SlackLog({ message: "critical", type: "errors", mention: true });
+    await mod.SlackLog({
+      message: "critical",
+      type: "errors",
+      mention: true,
+      mentionUserId: "U_TEST",
+    });
     const [, options] = fetchSpy.mock.calls[0];
-    expect(JSON.stringify(options)).toContain("<@U0404G6J3NJ>");
+    expect(JSON.stringify(options)).toContain("<@U_TEST>");
     expect(JSON.stringify(options)).toContain(":alert:");
     delete process.env.SLACK_WEBHOOKS_HOOK_ERRORS;
+    delete process.env.SLACK_MENTION_USER_ID;
     fetchSpy.mockRestore();
   });
 
@@ -110,7 +120,7 @@ describe("Logging", () => {
     process.env.SLACK_WEBHOOKS_HOOK_SUBSCRIBERS = "https://example.com/s";
     process.env.SLACK_WEBHOOKS_HOOK_ERRORS = "https://example.com/e";
     const mod = await import("../../src/index");
-    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => { });
+    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => {});
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true } as any);
     await mod.SlackLog({ message: "all-set", type: "alerts" });
     expect(logSpy).not.toHaveBeenCalled();

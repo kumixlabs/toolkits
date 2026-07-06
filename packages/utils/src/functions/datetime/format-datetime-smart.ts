@@ -42,14 +42,17 @@ export const formatDateTimeSmart = (
   locale: string = "en-US",
 ): string => {
   const date = new Date(datetime);
+  if (Number.isNaN(date.getTime())) {
+    return "Invalid Date";
+  }
   const now = new Date();
 
+  // Use the same timezone basis for the year comparison and the formatting so
+  // a date near midnight doesn't compare as a different year than it displays.
   return new Date(datetime).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
-    // if date is in previous year, show year
-    // else, hide year, show time
-    ...(date.getUTCFullYear() !== now.getUTCFullYear()
+    ...(date.getFullYear() !== now.getFullYear()
       ? { year: "numeric" }
       : {
           hour: "numeric",

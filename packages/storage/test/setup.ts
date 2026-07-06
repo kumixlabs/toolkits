@@ -1,4 +1,4 @@
-import { vi, expect } from "vitest";
+import { expect, vi } from "vitest";
 
 // Global test setup for Storage package tests
 global.console = {
@@ -12,7 +12,6 @@ process.env.NODE_ENV = "test";
 vi.mock("@aws-sdk/client-s3", async () => {
   const actual = await vi.importActual("@aws-sdk/client-s3");
   class S3Client {
-    constructor(_: any) { }
     send = vi.fn().mockResolvedValue({});
   }
   return {

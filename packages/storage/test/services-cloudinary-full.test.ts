@@ -22,7 +22,11 @@ describe("CloudinaryService full coverage", () => {
 
   it("core file operations delegate to provider", async () => {
     const cloud = new CloudinaryService(config);
-    const up = await cloud.upload({ key: "a.jpg", file: Buffer.from("x"), contentType: "image/jpeg" });
+    const up = await cloud.upload({
+      key: "a.jpg",
+      file: Buffer.from("x"),
+      contentType: "image/jpeg",
+    });
     expect(up.success).toBe(true);
     const del = await cloud.delete({ key: "a.jpg" });
     expect(del.success || del.error).toBeDefined();

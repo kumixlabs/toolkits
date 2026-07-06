@@ -1,40 +1,35 @@
 /**
  * Utility function for string case conversion
- * Provides conversion from snake_case to camelCase format
+ * Provides conversion from various cases (snake, kebab, space, Pascal) to camelCase
  */
 
 /**
- * Converts a string from snake_case to camelCase format
- * If the string is already in camelCase, it will be returned unchanged
+ * Converts a string to camelCase.
+ * Handles snake_case, kebab-case, CONST_CASE, PascalCase, and space-separated words.
  *
  * @param str - The string to convert to camelCase
  * @returns The camelCase version of the input string
  *
  * @example
  * ```ts
- * // Convert snake_case to camelCase
- * toCamelCase('user_name')
- * // Returns "userName"
- *
- * // Already camelCase strings remain unchanged
- * toCamelCase('userName')
- * // Returns "userName"
- *
- * // Multi-word snake_case strings
- * toCamelCase('first_name_last_name')
- * // Returns "firstNameLastName"
- *
- * // Handles single-word strings
- * toCamelCase('user')
- * // Returns "user"
+ * toCamelCase('user_name')        // "userName"
+ * toCamelCase('user-name')        // "userName"
+ * toCamelCase('first name')       // "firstName"
+ * toCamelCase('PascalCase')       // "pascalCase"
+ * toCamelCase('first_name_last')  // "firstNameLastName"
  * ```
  */
 export const toCamelCase = (str: string): string => {
-  // If already camelCase, return as is
-  if (/^[a-z][a-zA-Z0-9]*$/.test(str)) {
-    return str;
-  }
-
-  // Convert snake_case to camelCase
-  return str.toLowerCase().replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  if (!str) return "";
+  // Split on any non-alphanumeric boundary (underscore, dash, space) OR at the
+  // transition between lowercase/digit and uppercase (PascalCase boundaries).
+  const words = str
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean);
+  if (words.length === 0) return "";
+  const [first, ...rest] = words;
+  return `${first.toLowerCase()}${rest
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join("")}`;
 };

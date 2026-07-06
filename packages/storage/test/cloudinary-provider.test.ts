@@ -22,14 +22,21 @@ describe("CloudinaryProvider", () => {
     });
     expect(res.success).toBe(true);
     expect(res.url).toContain("cloudinary.com");
-    expect(res.publicUrl).toContain("/image/upload/test-public-id");
+    expect(res.publicUrl).toContain("/image/upload/uploads/test-public-id");
     expect(res.key).toBe("test-public-id");
   });
 
   it("getPublicUrl formats url", () => {
     const provider = new CloudinaryProvider(config);
     const url = provider.getPublicUrl("a/b.jpg");
-    expect(url).toBe("https://res.cloudinary.com/cloud/image/upload/a/b.jpg");
+    // Relative keys get config.folder prepended (consistent with upload()).
+    expect(url).toBe("https://res.cloudinary.com/cloud/image/upload/uploads/a/b.jpg");
+  });
+
+  it("getPublicUrl does not double-prefix an already-foldered key", () => {
+    const provider = new CloudinaryProvider(config);
+    const url = provider.getPublicUrl("uploads/a/b.jpg");
+    expect(url).toBe("https://res.cloudinary.com/cloud/image/upload/uploads/a/b.jpg");
   });
 
   it("delete returns success", async () => {
@@ -67,11 +74,10 @@ describe("CloudinaryProvider", () => {
     expect(res.contentType).toBe("image/jpeg");
   });
 
-  it("exists returns not implemented", async () => {
+  it("exists returns false when resource not found", async () => {
     const provider = new CloudinaryProvider(config);
     const res = await provider.exists("x");
     expect(res.exists).toBe(false);
-    expect(String(res.error)).toContain("not implemented");
   });
 
   it("copy/move/getPresignedUrl return not implemented", async () => {

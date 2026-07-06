@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { v2 as cloudinary } from "cloudinary";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CloudinaryProvider } from "../src/providers/cloudinary";
 import type { CloudinaryConfig } from "../src/types";

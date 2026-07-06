@@ -61,9 +61,12 @@ export class S3Provider implements StorageInterface {
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
+        // Surface STS / temporary credentials when provided. Previously the
+        // session token was dropped, breaking AWS STS / SSO / role-chain auth.
+        ...(config.sessionToken ? { sessionToken: config.sessionToken } : {}),
       },
       endpoint: config.endpoint,
-      forcePathStyle: config.forcePathStyle || false,
+      forcePathStyle: config.forcePathStyle ?? false,
     });
 
     this.fileOps = new FileOperations(this.client, this.config);

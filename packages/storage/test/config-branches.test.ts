@@ -48,4 +48,17 @@ describe("Config branch coverage", () => {
       }),
     ).toThrow("No storage configuration found");
   });
+
+  it("loadStorageConfig auto-detects S3 with default provider when KUMIX_S3_PROVIDER unset", () => {
+    const config = loadStorageConfig({
+      KUMIX_S3_REGION: "us-east-1",
+      KUMIX_S3_BUCKET: "bucket",
+      KUMIX_S3_ACCESS_KEY_ID: "key",
+      KUMIX_S3_SECRET_ACCESS_KEY: "secret",
+    });
+    expect(config.provider).toBe("aws");
+    if (config.provider !== "cloudflare-r2" && config.provider !== "cloudinary") {
+      expect(config.bucket).toBe("bucket");
+    }
+  });
 });

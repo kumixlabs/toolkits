@@ -6,7 +6,7 @@
 import { getEnv } from "../../env";
 
 const DEFAULT_ASSET_HOST =
-  getEnv("NEXT_PUBLIC_ASSETS_URL") || getEnv("VITE_ASSETS_URL") || "https://assets.kumix.com";
+  getEnv("NEXT_PUBLIC_ASSETS_URL") || getEnv("VITE_ASSETS_URL") || "https://assets.kumix.io";
 
 /**
  * Builds an absolute URL for a given asset path using the provided asset host (CDN) base.
@@ -14,8 +14,10 @@ const DEFAULT_ASSET_HOST =
  * If an absolute URL is provided as `path`, it will be returned as-is (host is ignored).
  *
  * @param path - Asset path or absolute URL to resolve
- * @param host - Optional asset host (base URL). Defaults to `https://assets.kumix.com`
- * @returns A fully-qualified asset URL string, or `null` if inputs are invalid
+ * @param host - Optional asset host (base URL). Defaults to `https://assets.kumix.io`
+ * @returns A fully-qualified asset URL string. On invalid input (empty path or
+ *   malformed base), falls back to the configured asset host rather than
+ *   throwing — call sites that need strict failure should validate inputs first.
  *
  * @example
  * ```ts
@@ -23,7 +25,7 @@ const DEFAULT_ASSET_HOST =
  *
  * // Default host
  * const u1 = assetsUrl('logo/logo.png');
- * // 'https://assets.kumix.com/logo/logo.png'
+ * // 'https://assets.kumix.io/logo/logo.png'
  *
  * // Custom host (full URL)
  * const u2 = assetsUrl('/images/icon.svg', 'https://cdn.example.com');
@@ -37,12 +39,12 @@ const DEFAULT_ASSET_HOST =
  * const u4 = assetsUrl('https://other.com/a.png', 'https://cdn.example.com');
  * // 'https://other.com/a.png'
  *
- * // Edge cases
+ * // Edge cases — falsy path or malformed base returns the configured asset host
  * const u5 = assetsUrl('');
- * // null
+ * // 'https://assets.kumix.io' (the configured host)
  *
  * const u6 = assetsUrl('logo.png', '://bad-host');
- * // null (invalid base)
+ * // '://bad-host' (the supplied host — invalid, returned as-is)
  * ```
  */
 export function assetsUrl(path: string, host: string = DEFAULT_ASSET_HOST): string {
@@ -78,17 +80,23 @@ export function assetsUrl(path: string, host: string = DEFAULT_ASSET_HOST): stri
  * import { getFlagUrl } from "@kumix/ui/utils/flag-url";
  *
  * const urlUs = getFlagUrl("US");
- * // "https://assets.kumix.com/media/flags/us.svg"
+ * // "https://assets.kumix.io/media/flags/us.svg"
  *
  * const urlId = getFlagUrl("id");
- * // "https://assets.kumix.com/media/flags/id.svg"
+ * // "https://assets.kumix.io/media/flags/id.svg"
  *
  * // Can be used directly in an <img /> or <Image /> component
  * // <img src={getFlagUrl("GB")} alt="United Kingdom flag" />
  * ```
  */
 export function getFlagUrl(flag: string): string {
-  const flagCode = flag.toLowerCase();
+  // Guard against null/undefined/empty/non-string inputs — without this the
+  // `.toLowerCase()` call throws and a bad flag code would otherwise produce a
+  // malformed ".../.svg" URL. Fall back to a deterministic placeholder.
+  if (typeof flag !== "string" || !flag.trim()) {
+    return `${assetsUrl("media/flags")}/unknown.svg`;
+  }
+  const flagCode = flag.trim().toLowerCase();
 
   return `${assetsUrl("media/flags")}/${flagCode}.svg`;
 }

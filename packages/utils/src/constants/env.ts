@@ -15,6 +15,16 @@ import { getEnv } from "../env";
 export const NEXT_PUBLIC_RECAPTCHA_SITE_KEY = getEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY");
 
 /**
+ * Recaptcha secret key for server-side token verification.
+ * Used by verifyRecaptchaToken to call Google's siteverify endpoint.
+ * Must NOT be exposed to the client (no NEXT_PUBLIC prefix).
+ *
+ * @example
+ * const isValid = await verifyRecaptchaToken(token);
+ */
+export const RECAPTCHA_SECRET_KEY = getEnv("RECAPTCHA_SECRET_KEY");
+
+/**
  * Slack webhook URLs for different log types.
  * Used for sending log messages to specific Slack channels based on log category.
  *
@@ -42,7 +52,7 @@ export const SLACK_WEBHOOKS = {
  * @example
  * <img src={OG_AVATAR_URL + userId} />
  */
-export const OG_AVATAR_URL = "https://api.kumix.com/og/avatar/";
+export const OG_AVATAR_URL = "https://api.kumix.io/og/avatar/";
 
 /**
  * Default pagination limit for API responses and UI lists.

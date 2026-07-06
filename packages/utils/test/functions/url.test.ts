@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+
 import {
-  isValidUrl,
+  constructURLFromUTMParams,
+  createHref,
+  getParamsFromURL,
   getSearchParams,
   getSearchParamsWithArray,
-  getParamsFromURL,
-  constructURLFromUTMParams,
   getUrlWithoutUTMParams,
-  createHref,
+  isValidUrl,
 } from "../../src/index";
 
 describe("URL", () => {
@@ -19,7 +20,11 @@ describe("URL", () => {
   it("search params utilities should parse correctly", () => {
     const url = "https://x.com?name=John&age=30&tag=js&tag=react";
     expect(getSearchParams(url)).toEqual({ name: "John", age: "30", tag: "react" });
-    expect(getSearchParamsWithArray(url)).toEqual({ name: "John", age: "30", tag: ["js", "react"] });
+    expect(getSearchParamsWithArray(url)).toEqual({
+      name: "John",
+      age: "30",
+      tag: ["js", "react"],
+    });
     expect(getParamsFromURL("https://x.com?name=John&empty=")).toEqual({ name: "John" });
     expect(getParamsFromURL("")).toEqual({});
     expect(getParamsFromURL("not-a-url")).toEqual({});

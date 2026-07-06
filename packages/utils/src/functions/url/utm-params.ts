@@ -132,7 +132,7 @@ export const constructURLFromUTMParams = (
       if (value === "") {
         newURL.searchParams.delete(key);
       } else {
-        newURL.searchParams.set(key, value.replace("+", " "));
+        newURL.searchParams.set(key, value.replace(/\+/g, " "));
       }
     }
     return newURL.toString();
@@ -180,9 +180,11 @@ export const constructURLFromUTMParams = (
 export const getUrlWithoutUTMParams = (url: string): string => {
   try {
     const newURL = new URL(url);
-    paramsMetadata.forEach((param) => {
-      newURL.searchParams.delete(param.key);
-    });
+    // Strip every recognized UTM/ref tag. Iterate UTMTags directly so adding a
+    // new tag in one place automatically extends the strip list.
+    for (const key of UTMTags) {
+      newURL.searchParams.delete(key);
+    }
     return newURL.toString();
   } catch (_) {
     return url;

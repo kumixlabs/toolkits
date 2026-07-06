@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { getSizeAvatar, getUserName } from "../../src/functions/string/auth";
 
 describe("getSizeAvatar", () => {

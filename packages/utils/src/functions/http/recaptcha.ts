@@ -4,7 +4,7 @@
  * Integrates with Google's verification API for bot protection
  */
 
-import { NEXT_PUBLIC_RECAPTCHA_SITE_KEY } from "../../constants/env";
+import { RECAPTCHA_SECRET_KEY } from "../../constants/env";
 import { logger } from "../logging/logger";
 
 /**
@@ -44,10 +44,10 @@ interface ReCaptchaVerifyResponse {
  */
 export async function verifyRecaptchaToken(token: string): Promise<boolean> {
   try {
-    const secretKey = NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    const secretKey = RECAPTCHA_SECRET_KEY;
 
     if (!secretKey) {
-      logger.error("NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set");
+      logger.error("RECAPTCHA_SECRET_KEY is not set");
       return false;
     }
 

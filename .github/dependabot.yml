@@ -1,0 +1,87 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      biome:
+        patterns: ["@biomejs/*", "@kumix/biome-config"]
+      build:
+        patterns:
+          ["tsdown", "typescript", "turbo", "@arethetypeswrong/*", "publint"]
+      test:
+        patterns: ["vitest", "@vitest/*"]
+      changesets:
+        patterns: ["@changesets/*"]
+      commitlint:
+        patterns: ["@commitlint/*"]
+    commit-message:
+      prefix: build
+      include: scope
+    labels: ["dependencies"]
+
+  - package-ecosystem: npm
+    directory: "/packages/email"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      react-email:
+        patterns: ["react*", "react-email*"]
+      providers:
+        patterns: ["resend", "nodemailer"]
+    commit-message:
+      prefix: build
+      include: scope
+    labels: ["dependencies"]
+
+  - package-ecosystem: npm
+    directory: "/packages/storage"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      aws:
+        patterns: ["@aws-sdk/*"]
+      cloudinary:
+        patterns: ["cloudinary"]
+    commit-message:
+      prefix: build
+      include: scope
+    labels: ["dependencies"]
+
+  - package-ecosystem: npm
+    directory: "/packages/utils"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      crypto:
+        patterns: ["bcryptjs", "jsonwebtoken", "ms"]
+      parsing:
+        patterns: ["chrono-node"]
+    commit-message:
+      prefix: build
+      include: scope
+    labels: ["dependencies"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["actions/*", "oven-sh/*"]
+    commit-message:
+      prefix: ci
+      include: scope
+    labels: ["dependencies"]

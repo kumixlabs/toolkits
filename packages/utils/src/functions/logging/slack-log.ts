@@ -59,24 +59,31 @@ export const SlackLog = async ({
   message,
   type,
   mention = false,
+  mentionUserId,
 }: {
   message: string;
   type: "alerts" | "cron" | "links" | "subscribers" | "errors";
+  /**
+   * Mention a Slack user when `true`. Requires `mentionUserId` to be provided
+   * (defaults to env `SLACK_MENTION_USER_ID`) — previously a hardcoded user ID
+   * was baked into this published package.
+   */
   mention?: boolean;
+  /** Slack user ID (e.g. `U0404G6J3NJ`) to mention. Falls back to env. */
+  mentionUserId?: string;
 }) => {
-  if (
-    isDevelopment ||
-    !SLACK_WEBHOOKS.ALERTS ||
-    !SLACK_WEBHOOKS.CRON ||
-    !SLACK_WEBHOOKS.LINKS ||
-    !SLACK_WEBHOOKS.SUBSCRIBERS ||
-    !SLACK_WEBHOOKS.ERRORS
-  ) {
-    logger.log(message);
-  }
-  /* Log a message to the console */
   const HOOK = logTypeToEnv[type];
-  if (!HOOK) return;
+
+  // In development or when the relevant webhook is missing, log to console and bail
+  if (isDevelopment || !HOOK) {
+    logger.log(message);
+    return;
+  }
+
+  const resolvedMentionId =
+    mentionUserId ||
+    (typeof process !== "undefined" ? process.env.SLACK_MENTION_USER_ID : undefined);
+
   try {
     return await fetch(HOOK, {
       method: "POST",
@@ -90,7 +97,7 @@ export const SlackLog = async ({
             text: {
               type: "mrkdwn",
               // prettier-ignore
-              text: `${mention ? "<@U0404G6J3NJ> " : ""}${type === "alerts" || type === "errors" ? ":alert: " : ""}${message}`,
+              text: `${mention && resolvedMentionId ? `<@${resolvedMentionId}> ` : ""}${type === "alerts" || type === "errors" ? ":alert: " : ""}${message}`,
             },
           },
         ],

@@ -7,6 +7,22 @@ import { createId, init } from "@paralleldrive/cuid2";
 
 export { createId, init as initCuid };
 
+// Cache generators per length so we keep cuid2's internal fingerprint+counter
+// state across calls instead of recreating it on every invocation (which would
+// defeat cuid2's collision-resistance between rapid successive calls).
+const generatorCache = new Map<number, (prefix?: string) => string>();
+
+function getGenerator(length: number): (prefix?: string) => string {
+  let generator = generatorCache.get(length);
+  if (!generator) {
+    // NOTE: do NOT override `random` — cuid2 defaults to a cryptographically
+    // secure RNG. Replacing it with Math.random makes IDs predictable.
+    generator = init({ length });
+    generatorCache.set(length, generator);
+  }
+  return generator;
+}
+
 /**
  * Generates a CUID (Collision-resistant Unique IDentifier)
  * CUIDs are designed to be globally unique, even in distributed systems.
@@ -44,10 +60,8 @@ export function cuid() {
 }
 
 /**
- * Generates a custom ID with an optional prefix and configurable length
- * This function uses `@paralleldrive/cuid2` to create unique identifiers
- * with an optional prefix. Useful for creating IDs with specific patterns
- * like `user_abc123` or `order_987xyz`.
+ * Generates a custom ID with an optional prefix and configurable length.
+ * Uses `@paralleldrive/cuid2`'s cryptographically-secure RNG.
  *
  * @param prefix - Optional prefix to prepend to the ID
  * @param length - The length of the generated ID (default is 12)
@@ -55,38 +69,23 @@ export function cuid() {
  *
  * @example
  * ```ts
- * import { customeId } from '@/utils/functions';
+ * import { customId } from '@/utils/functions';
  *
  * // Generate ID with prefix
- * const userId = customeId('user_');
+ * const userId = customId('user_');
  * // Returns: 'user_l5r8xn2gzqnb'
  *
  * // Generate ID with custom length
- * const orderId = customeId('order_', 16);
- * // Returns: 'order_l5r8xn2gzqnbf4r2'
- *
- * // Generate ID without prefix
- * const randomId = customeId();
- * // Returns: 'l5r8xn2gzqnb'
- *
- * // Use for different entity types
- * const productId = customeId('prod_', 8);
- * const invoiceId = customeId('inv_', 10);
- * const sessionId = customeId('sess_', 20);
- *
- * // Use in API responses
- * const apiResponse = {
- *   id: customeId('api_'),
- *   timestamp: Date.now(),
- *   data: {...}
- * };
+ * const orderId = customId('order_', 16);
  * ```
  */
-export function customeId(prefix?: string, length: number = 12) {
-  const generateId = init({
-    random: Math.random,
-    length,
-  });
-
+export function customId(prefix?: string, length: number = 12) {
+  const generateId = getGenerator(length);
   return `${prefix || ""}${generateId()}`;
 }
+
+/**
+ * @deprecated Use {@link customId} instead. This alias has a typo and is kept
+ * only for backward compatibility; it will be removed in a future major.
+ */
+export const customeId = customId;

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   googleTrackCodeCopy,
   googleTrackDirectionChange,
@@ -27,17 +28,25 @@ describe("googleTrackEvent", () => {
 
   it("sends event with defaults", () => {
     googleTrackEvent({ name: "signup", properties: { plan: "pro" } });
-    expect(gtag).toHaveBeenCalledWith("event", "signup", expect.objectContaining({
-      plan: "pro",
-      event_category: "engagement",
-    }));
+    expect(gtag).toHaveBeenCalledWith(
+      "event",
+      "signup",
+      expect.objectContaining({
+        plan: "pro",
+        event_category: "engagement",
+      }),
+    );
   });
 
   it("uses provided category", () => {
     googleTrackEvent({ name: "signup", properties: { category: "crud" } });
-    expect(gtag).toHaveBeenCalledWith("event", "signup", expect.objectContaining({
-      event_category: "crud",
-    }));
+    expect(gtag).toHaveBeenCalledWith(
+      "event",
+      "signup",
+      expect.objectContaining({
+        event_category: "crud",
+      }),
+    );
   });
 
   it("skips when name is empty", () => {

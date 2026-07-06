@@ -22,10 +22,14 @@ export function loadResendConfig(env?: EnvRecord): ResendConfig | null {
   const e = resolveEnv(env);
   if (!e) return null;
 
-  const apiKey = e.KUMIX_EMAIL_RESEND_API_KEY;
-  const fromName = e.KUMIX_EMAIL_FROM_NAME;
-  const fromEmail = e.KUMIX_EMAIL_FROM_EMAIL;
-  const replyTo = e.KUMIX_EMAIL_REPLY_TO;
+  // Trim before the presence check so whitespace-only values are not accepted
+  // as valid (previously `"   "` passed and produced a config with empty
+  // credentials). Do NOT trim `apiKey`/`pass` — leading/trailing characters
+  // can be meaningful in tokens.
+  const apiKey = e.KUMIX_EMAIL_RESEND_API_KEY ?? e.RESEND_API_KEY;
+  const fromName = (e.KUMIX_EMAIL_FROM_NAME ?? e.EMAIL_FROM_NAME)?.trim();
+  const fromEmail = (e.KUMIX_EMAIL_FROM_EMAIL ?? e.EMAIL_FROM_EMAIL)?.trim();
+  const replyTo = (e.KUMIX_EMAIL_REPLY_TO ?? e.EMAIL_REPLY_TO)?.trim();
 
   if (!apiKey || !fromName || !fromEmail) return null;
 
@@ -36,22 +40,33 @@ export function loadNodemailerConfig(env?: EnvRecord): NodemailerConfig | null {
   const e = resolveEnv(env);
   if (!e) return null;
 
-  const host = e.KUMIX_EMAIL_SMTP_HOST;
-  const port = e.KUMIX_EMAIL_SMTP_PORT;
-  const secure = e.KUMIX_EMAIL_SMTP_SECURE;
-  const user = e.KUMIX_EMAIL_SMTP_USER;
-  const pass = e.KUMIX_EMAIL_SMTP_PASS;
-  const fromName = e.KUMIX_EMAIL_FROM_NAME;
-  const fromEmail = e.KUMIX_EMAIL_FROM_EMAIL;
-  const replyTo = e.KUMIX_EMAIL_REPLY_TO;
+  const host = (e.KUMIX_EMAIL_SMTP_HOST ?? e.SMTP_HOST)?.trim();
+  const port = e.KUMIX_EMAIL_SMTP_PORT ?? e.SMTP_PORT;
+  const secure = e.KUMIX_EMAIL_SMTP_SECURE ?? e.SMTP_SECURE;
+  const user = e.KUMIX_EMAIL_SMTP_USER ?? e.SMTP_USER;
+  const pass = e.KUMIX_EMAIL_SMTP_PASS ?? e.SMTP_PASS;
+  const fromName = (e.KUMIX_EMAIL_FROM_NAME ?? e.EMAIL_FROM_NAME)?.trim();
+  const fromEmail = (e.KUMIX_EMAIL_FROM_EMAIL ?? e.EMAIL_FROM_EMAIL)?.trim();
+  const replyTo = (e.KUMIX_EMAIL_REPLY_TO ?? e.EMAIL_REPLY_TO)?.trim();
 
   if (!host || !port || !user || !pass || !fromName || !fromEmail) return null;
+
+  const parsedPort = parseInt(port, 10);
+  if (Number.isNaN(parsedPort) || parsedPort < 1 || parsedPort > 65535) return null;
+
+  // Lowercase once so capitalized spellings ("True", "TRUE") also enable TLS.
+  const secureNorm = typeof secure === "string" ? secure.toLowerCase() : "";
 
   return {
     provider: "nodemailer",
     from: { name: fromName, email: fromEmail },
     replyTo,
-    smtp: { host, port: parseInt(port, 10), secure: secure === "true", auth: { user, pass } },
+    smtp: {
+      host,
+      port: parsedPort,
+      secure: secureNorm === "true" || secureNorm === "1" || secureNorm === "yes",
+      auth: { user, pass },
+    },
   };
 }
 

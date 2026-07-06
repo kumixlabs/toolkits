@@ -212,7 +212,7 @@ Use the tools to discover and explore available packages:
 ### 1. Package Discovery
 
 1. Use `list_packages` to see all available packages
-2. Filter by category if needed (email/storage/utils/config)
+2. Filter by category if needed (email/storage/utils)
 3. Use `get_package_info` for detailed package information
 
 ### 2. Component Search and Analysis

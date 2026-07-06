@@ -30,9 +30,11 @@ import { isValidUrl } from "./url-validation";
  * generateDomainFromName('My Cool Project', 'com')
  * // Returns "mycoolproject.com"
  *
- * // With country code TLD if possible
+ * // ccTLD fallback only applies when the trailing 2 chars form a known ccTLD;
+ * // for "Canada" the trailing 2 chars are "da" (not a ccTLD), so the default
+ * // extension is used.
  * generateDomainFromName('Canada')
- * // Returns "canad.ca"
+ * // Returns "canada.link"
  *
  * // With vowels removed if needed
  * generateDomainFromName('Digital', 'io')
@@ -181,7 +183,7 @@ export const getApexDomain = (url: string): string => {
     // otherwise, it's a subdomain (e.g. kumix.vercel.app), so we return the last 2 parts
     return parts.slice(-2).join(".");
   }
-  // if it's a normal domain (e.g. kumix.com), we return the domain
+  // if it's a normal domain (e.g. kumix.io), we return the domain
   return domain;
 };
 

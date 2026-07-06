@@ -40,6 +40,7 @@
  * ```
  */
 export const chunk = <T>(array: T[], chunk_size: number): T[][] => {
+  if (chunk_size <= 0) return [];
   return array.reduce((resultArray, item, index) => {
     const chunkIndex = Math.floor(index / chunk_size);
 

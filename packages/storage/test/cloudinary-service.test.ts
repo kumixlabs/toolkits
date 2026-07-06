@@ -18,7 +18,8 @@ describe("CloudinaryService", () => {
     const res = await cloud.uploadFile("folder/photo.jpg", Buffer.from("x"), "image/jpeg");
     expect(res.success).toBe(true);
     const url = cloud.getPublicUrl("folder/photo.jpg");
-    expect(url).toBe("https://res.cloudinary.com/cloud/image/upload/folder/photo.jpg");
+    // Relative key gets config.folder prepended (consistent with uploadFile).
+    expect(url).toBe("https://res.cloudinary.com/cloud/image/upload/uploads/folder/photo.jpg");
   });
 
   it("getProvider and getConfig", () => {

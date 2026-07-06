@@ -43,13 +43,15 @@ export const normalizeString = (key: string): string => {
 
   const original = key;
   const normalized = key
-    // Remove BOM and other special characters
+    // Strip a leading UTF-8 BOM expressed either as the actual U+FEFF character
+    // or as its raw byte sequence EF BB BF. (\u escapes only take 4 hex digits,
+    // so the previous \uEFBBBF never matched the bytes.)
     .replace(/^\uFEFF/, "")
     .replace(/^\uFFFE/, "")
-    .replace(/^\uEFBBBF/, "")
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: Handle null byte + BOM sequences without using regex with control characters
+    .replace(/^[\u00EF\u00BB\u00BF]+/, "")
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: handle null-byte + BOM prefixes
     .replace(/^[\u0000\uFEFF]{2}/, "")
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: Null byte character needed for BOM handling
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: handle null-byte + noncharacter BOM prefixes
     .replace(/^[\uFFFE\u0000]{2}/, "")
     .replace(/^\u2028/, "")
     .replace(/^\u2029/, "")
@@ -64,12 +66,11 @@ export const normalizeString = (key: string): string => {
     // Optional: normalize case
     .toLowerCase();
 
-  // Optional: Add logging in development
-  if (isDevelopment && original !== normalized) {
-    logger.log(`Normalized key: "${original}" -> "${normalized}"`);
+  // Logging is gated behind an explicit env var (KUMIX_DEBUG_NORMALIZE) to avoid
+  // accidentally dumping user input / secrets through the logger in dev.
+  if (isDevelopment && process.env.KUMIX_DEBUG_NORMALIZE && original !== normalized) {
     logger.log(
-      "Original char codes:",
-      Array.from(original).map((c) => c.charCodeAt(0)),
+      `normalizeString: input changed (length ${original.length} -> ${normalized.length})`,
     );
   }
 

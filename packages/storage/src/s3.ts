@@ -59,10 +59,14 @@ export { S3Service } from "./services/s3";
 export function createS3(): S3Service;
 export function createS3(config: S3Config): S3Service;
 export function createS3(config: S3Config, env: EnvRecord): S3Service;
+export function createS3(config: undefined, env: EnvRecord): S3Service;
 export function createS3(config?: S3Config, env?: EnvRecord): S3Service {
   if (config) {
     return new S3Service(config);
   }
+  // When `config` is omitted, build the config from env. This overload also
+  // covers `createS3(undefined, env)` which was previously rejected by the
+  // published signatures despite being a valid call.
   const envConfig = loadS3Config(env);
   return new S3Service(envConfig);
 }

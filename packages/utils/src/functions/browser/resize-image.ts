@@ -69,7 +69,9 @@ export const resizeImage = (
     const reader = new FileReader();
     reader.onload = (e: ProgressEvent<FileReader>) => {
       const img = new Image();
-      img.src = e.target?.result as string;
+      // Attach load/error handlers BEFORE setting src. For cached images the
+      // load event can fire synchronously after assigning src, and handlers
+      // attached afterwards would miss it, leaving the promise pending forever.
       img.onload = () => {
         const targetWidth = opts.width;
         const targetHeight = opts.height;
@@ -122,6 +124,7 @@ export const resizeImage = (
         resolve(base64Image);
       };
       img.onerror = (error) => reject(new Error(`Image loading error: ${error}`));
+      img.src = e.target?.result as string;
     };
     reader.onerror = (error) => reject(new Error(`FileReader error: ${error}`));
     reader.readAsDataURL(file);
@@ -245,12 +248,14 @@ export async function loadImage(file: File): Promise<HTMLImageElement> {
     const image = new Image();
     const reader = new FileReader();
 
+    // Attach image handlers before the data URL is assigned to src to avoid
+    // missing the load event on cached/instant-decode images.
+    image.onload = () => resolve(image);
+    image.onerror = (err) => reject(err);
+
     reader.onload = (e) => {
       image.src = e.target?.result as string;
     };
-
-    image.onload = () => resolve(image);
-    image.onerror = (err) => reject(err);
 
     reader.readAsDataURL(file);
   });

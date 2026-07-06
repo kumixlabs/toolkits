@@ -4,7 +4,7 @@ Thank you for your interest in contributing to Kumix Toolkits! This monorepo hos
 
 ## Code of Conduct
 
-This project is governed by our [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to kumixdev@gmail.com.
+This project and everyone participating in it is governed by our [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to the maintainers at **hai@kumix.io**.
 
 ## Why Contribute?
 
@@ -92,13 +92,13 @@ This project uses [Biome](https://biomejs.dev/) for linting and formatting to en
 - **Trailing Commas**: All
 - **Arrow Parentheses**: Always
 
-### Format and Lint
+### Lint and Format
 
 Before committing, run:
 
 ```bash
 # Format and lint in one command
-bun run lint:format
+bun run format && bun run lint:fix
 
 # Or run separately
 bun run format    # Format only
@@ -121,22 +121,24 @@ Use descriptive branch names:
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-feat(animation): add new text reveal component
-fix(hook): resolve hydration mismatch in useMounted
-docs(general): update utility function documentation
-refactor(base): simplify button component variants
-test(default): add unit tests for data grid filtering
+feat(email): add attachment support to Resend provider
+fix(storage): resolve pagination cursor mismatch
+docs(utils): update README with validateEmail examples
+refactor(email): switch to dynamic imports for optional peers
+test(utils): add SECURE capitalization tests
 ```
 
 **Format**: `type(scope): description`
 
 **Types**:
 
-- `feat`: New feature
+- `feat`: New feature (also `feature`)
 - `fix`: Bug fix
-- `docs`: Documentation changes
 - `refactor`: Code refactoring
+- `docs`: Documentation changes
+- `build`: Build system / dependencies
 - `test`: Adding or updating tests
+- `ci`: CI configuration
 - `chore`: Maintenance tasks
 
 ### Writing Code
@@ -206,9 +208,9 @@ Make sure:
 ### Pull Request Checklist
 
 - [ ] Code follows the project's style guidelines
-- [ ] Type-check succeeds (`bun types:check`)
-- [ ] Build succeeds (`bun build`)
-- [ ] Code is properly formatted (`bun lint:format`)
+- [ ] Type-check succeeds (`bun run types:check`)
+- [ ] Build succeeds (`bun run build`)
+- [ ] Code is properly formatted (`bun run format && bun run lint:fix`)
 - [ ] Commit messages follow conventional commits
 - [ ] Documentation is updated (if needed)
 - [ ] No breaking changes (or clearly documented if necessary)
@@ -269,7 +271,7 @@ This project uses [Changesets](https://github.com/changesets/changesets) for ver
 
 ## Security
 
-If you discover a security vulnerability within Kumix Toolkits, please send an email to kumixdev@gmail.com. All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within Kumix Toolkits, please send an email to hai@kumix.io. All security vulnerabilities will be promptly addressed.
 
 **Do not report security issues through public GitHub issues.**
 

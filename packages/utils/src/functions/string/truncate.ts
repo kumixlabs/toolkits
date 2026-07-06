@@ -38,6 +38,13 @@
  * ```
  */
 export const truncate = (str: string | null | undefined, length: number): string | null => {
-  if (!str || str.length <= length) return str ?? null;
-  return `${str.slice(0, length - 3)}...`;
+  if (!str) return null;
+  if (str.length <= length) return str;
+  // Ellipsis needs at least 4 chars to fit ("x..."); for smaller lengths, fall
+  // back to a hard slice so the result never exceeds the requested length.
+  const ELLIPSIS = "...";
+  if (length <= ELLIPSIS.length) {
+    return str.slice(0, length);
+  }
+  return `${str.slice(0, length - ELLIPSIS.length)}${ELLIPSIS}`;
 };

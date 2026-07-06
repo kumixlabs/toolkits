@@ -23,8 +23,7 @@
  * ```
  */
 
-import React from "react";
-import { render } from "react-email";
+import type { ComponentType } from "react";
 
 // =============================================================================
 // TEMPLATE RENDERING
@@ -47,17 +46,24 @@ import { render } from "react-email";
  * ```
  */
 export async function renderEmailTemplate<T extends Record<string, unknown>>(
-  Template: React.ComponentType<T>,
+  Template: ComponentType<T>,
   props: T,
 ): Promise<string> {
-  return render(React.createElement(Template, props));
+  // Dynamic-import react/react-email so they are only loaded when a caller
+  // actually renders a template. These are optional peers; a static top-level
+  // import would crash module load for consumers that only use plain-HTML
+  // sends (or only Nodemailer).
+  const { createElement } = await import("react");
+  const { render } = await import("react-email");
+  return render(createElement(Template, props));
 }
 
 /**
  * Generate plain text from HTML
  *
- * Converts HTML content to plain text by removing tags and normalizing whitespace.
- * Useful for creating text versions of HTML emails.
+ * Converts HTML content to plain text by removing tags and normalizing
+ * whitespace. Block-level boundaries (`<br>`, `</p>`, headings) are preserved
+ * as newlines in the output.
  *
  * @param html - HTML string to convert
  * @returns Plain text version of the HTML
@@ -65,18 +71,27 @@ export async function renderEmailTemplate<T extends Record<string, unknown>>(
  * ```typescript
  * const html = '<h1>Hello</h1><p>Welcome to our <strong>platform</strong>!</p>';
  * const text = htmlToText(html);
- * console.log(text); // "Hello Welcome to our platform!"
+ * // "Hello\n\nWelcome to our platform!"
  * ```
  */
 export function htmlToText(html: string): string {
+  // Insert newline placeholders for block boundaries BEFORE the whitespace
+  // normalization pass. Previously `.replace(/\s+/g, " ")` ran before any
+  // newline logic and collapsed the inserted `\n`s back into spaces, so the
+  // function always returned a single line despite its docs and tests.
+  const NEWLINE = "\u0000N\u0000";
+  const DOUBLE_NEWLINE = "\u0000D\u0000";
   return html
-    .replace(/<br\s*\/?>/gi, "\n") // Convert <br> to newlines
-    .replace(/<\/p>/gi, "\n\n") // Convert </p> to double newlines
-    .replace(/<\/h[1-6]>/gi, "\n\n") // Convert heading endings to double newlines
+    .replace(/<br\s*\/?>/gi, NEWLINE)
+    .replace(/<\/p>/gi, DOUBLE_NEWLINE)
+    .replace(/<\/h[1-6]>/gi, DOUBLE_NEWLINE)
     .replace(/<[^>]*>/g, " ") // Remove all other HTML tags
-    .replace(/\s+/g, " ") // Normalize whitespace
-    .replace(/\n\s+/g, "\n") // Remove spaces after newlines
-    .trim();
+    .replace(/\s+/g, " ") // Normalize whitespace (placeholders are non-whitespace)
+    .trim()
+    .split(DOUBLE_NEWLINE)
+    .map((segment) => segment.split(NEWLINE).join("\n").trim())
+    .filter((segment) => segment.length > 0)
+    .join("\n\n");
 }
 
 // =============================================================================
@@ -145,9 +160,22 @@ export function filterValidEmails(emails: string[]): string[] {
 // =============================================================================
 
 /**
+ * Strip CR/LF from an email header value to prevent SMTP header injection.
+ *
+ * @param value - Raw header/recipient value
+ * @returns The value with all `\r` and `\n` removed
+ */
+export function stripCrlf(value: string): string {
+  return value.replace(/[\r\n]/g, "");
+}
+
+/**
  * Format email address with display name
  *
- * Combines a display name with an email address in the standard format.
+ * Combines a display name with an email address in the standard `"Name" <email>`
+ * format. The display name is quoted and any embedded quotes/backslashes are
+ * escaped; CR/LF characters are stripped from both parts to prevent SMTP header
+ * injection.
  *
  * @param name - Display name for the email address
  * @param email - Email address
@@ -159,8 +187,15 @@ export function filterValidEmails(emails: string[]): string[] {
  * ```
  */
 export function formatEmailAddress(name: string, email: string): string {
-  // Don't escape quotes - keep them as is for standard email format
-  return `${name} <${email}>`;
+  // Strip CR/LF from both halves to prevent header injection. A newline in
+  // either `name` or `email` lets a malicious value inject extra headers
+  // (BCC, additional recipients, etc.) when concatenated into a `from` field.
+  const safeName = name.replace(/[\r\n]/g, "");
+  const safeEmail = email.replace(/[\r\n]/g, "");
+  // Escape backslashes and double quotes per RFC 5322 atom/quoted-string rules
+  // and wrap the name in quotes so special characters survive the wire.
+  const escapedName = safeName.replace(/\\|"/g, (ch) => `\\${ch}`);
+  return `"${escapedName}" <${safeEmail}>`;
 }
 
 /**
@@ -210,13 +245,18 @@ export function extractDisplayName(formattedAddress: string): string {
 // =============================================================================
 
 /**
- * Sanitize HTML content for email
+ * Strip some unsafe constructs from HTML (basic, NOT a security boundary).
  *
- * Removes potentially dangerous HTML elements and attributes while preserving
- * email-safe formatting.
+ * ⚠️ This function is a coarse cleanup pass for trusted-or-low-risk email
+ * content. It is **not** a sanitizer. It removes `<script>`/`<style>`/
+ * `<iframe>`/`<object>`/`<embed>`/`<form>` blocks, on* event handlers (with
+ * and without quotes), and obvious `javascript:` URLs. It will NOT defeat a
+ * motivated attacker — HTML entity-encoding, unquoted attributes, SVG/CS
+ * injection, and many other bypasses exist. For content from untrusted
+ * sources, use a purpose-built sanitizer (e.g. DOMPurify) before rendering.
  *
- * @param html - HTML content to sanitize
- * @returns Sanitized HTML safe for email
+ * @param html - HTML content to clean up
+ * @returns HTML with the dangerous constructs above removed
  * @example
  * ```typescript
  * const unsafeHtml = '<script>alert("xss")</script><p>Safe content</p>';
@@ -225,15 +265,26 @@ export function extractDisplayName(formattedAddress: string): string {
  * ```
  */
 export function sanitizeHtml(html: string): string {
-  // Remove script tags and their content
-  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  // Remove entire blocks of dangerous tags (script, style, iframe, object,
+  // embed, form, svg). Previous version only stripped <script> and let
+  // <iframe>, <object>, <embed>, <svg onload=...>, and <style> through.
+  let sanitized = html.replace(
+    /<(script|style|iframe|object|embed|form|svg)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi,
+    "",
+  );
 
-  // Remove dangerous attributes
-  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, ""); // onclick, onload, etc.
-  sanitized = sanitized.replace(/\s*javascript\s*:/gi, ""); // javascript: urls
+  // Remove event handler attributes: handle both quoted (`onclick="..."`) and
+  // unquoted (`onclick=foo`) forms. The previous regex only matched quoted values.
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
 
-  // Remove style attributes that could be dangerous
-  sanitized = sanitized.replace(/\s*style\s*=\s*["'][^"']*expression\([^"']*\)["']/gi, "");
+  // Remove `javascript:` URLs in href/src/etc. Also catch common encodings.
+  sanitized = sanitized.replace(
+    /(href|src|xlink:href|action|formaction)\s*=\s*["']?\s*javascript:/gi,
+    '$1=""',
+  );
+
+  // Remove `style` attributes containing `expression(...)` (legacy IE CSS expression XSS)
+  sanitized = sanitized.replace(/\s*style\s*=\s*["'][^"']*expression\([^"']*\)[^"']*["']/gi, "");
 
   return sanitized;
 }
@@ -255,7 +306,14 @@ export function sanitizeHtml(html: string): string {
  * ```
  */
 export function truncateText(text: string, maxLength: number, ellipsis: string = "..."): string {
+  if (maxLength <= 0) return "";
   if (text.length <= maxLength) return text;
+  // When `maxLength` is shorter than the ellipsis itself, fall back to a hard
+  // slice so the result never exceeds the requested length. Previously
+  // `truncateText("hello", 2)` returned `"hell..."` (longer than `maxLength`).
+  if (maxLength <= ellipsis.length) {
+    return text.slice(0, maxLength);
+  }
   return text.slice(0, maxLength - ellipsis.length) + ellipsis;
 }
 
@@ -531,13 +589,17 @@ export function getMimeType(filename: string): string {
  * ```
  */
 export function formatFileSize(bytes: number, decimals: number = 2): string {
+  if (!Number.isFinite(bytes)) return "0 Bytes";
   if (bytes === 0) return "0 Bytes";
+  if (bytes < 0) return `-${formatFileSize(-bytes, decimals)}`;
 
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
 
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  // Floor the index (and clamp) so fractional bytes (e.g. 0.5) don't pick a
+  // negative index and produce `"512 undefined"`.
+  const i = Math.max(0, Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1));
 
   return `${(bytes / k ** i).toFixed(dm)} ${sizes[i]}`;
 }

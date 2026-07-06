@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { cuid, customeId, nanoid, uid } from "../../src/index";
 
 describe("Crypto", () => {

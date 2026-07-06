@@ -64,19 +64,14 @@ export { ResendProvider } from "./providers/resend";
  * TypeScript type definitions
  */
 export type {
-  BulkEmailOptions,
-  BulkEmailResult,
+  BaseEmailConfig,
   ConfigValidationResult,
-  EmailAnalytics,
   EmailAttachment,
   EmailConfig,
   EmailProvider,
   EmailResult,
   EmailTemplateData,
-  EmailTemplateOptions,
   EmailValidationResult,
-  EmailWebhookEvent,
-  EmailWebhookPayload,
   IEmailProvider,
   NodemailerConfig,
   ResendConfig,

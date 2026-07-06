@@ -1,29 +1,30 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  THEME_MODES,
-  META_THEME_COLORS,
+  CONTINENT_CODES,
+  CONTINENTS,
+  ccTLDs,
   DEFAULT_THEME_MODE,
-  NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
-  SLACK_WEBHOOKS,
-  OG_AVATAR_URL,
-  PAGINATION_LIMIT,
-  TWO_WEEKS_IN_SECONDS,
-  THE_BEGINNING_OF_TIME,
   INFINITY_NUMBER,
-  REDIRECT_QUERY_PARAM,
-  NODE_ENV,
   isDevelopment,
-  isStaging,
   isProduction,
-  LOG_LEVEL,
+  isStaging,
   LOCALHOST_GEO_DATA,
   LOCALHOST_IP,
+  LOG_LEVEL,
+  META_THEME_COLORS,
+  NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+  NODE_ENV,
+  OG_AVATAR_URL,
+  PAGINATION_LIMIT,
+  RECAPTCHA_SECRET_KEY,
+  REDIRECT_QUERY_PARAM,
   RESERVED_SLUGS,
-  CONTINENTS,
-  CONTINENT_CODES,
-  ccTLDs,
+  SLACK_WEBHOOKS,
   SPECIAL_APEX_DOMAINS,
+  THE_BEGINNING_OF_TIME,
+  THEME_MODES,
+  TWO_WEEKS_IN_SECONDS,
 } from "../src/index";
 
 describe("Constants", () => {
@@ -40,7 +41,11 @@ describe("Constants", () => {
 
   describe("Env", () => {
     it("should expose env constants with expected defaults", () => {
-      expect(NEXT_PUBLIC_RECAPTCHA_SITE_KEY === undefined || typeof NEXT_PUBLIC_RECAPTCHA_SITE_KEY === "string").toBe(
+      expect(
+        NEXT_PUBLIC_RECAPTCHA_SITE_KEY === undefined ||
+          typeof NEXT_PUBLIC_RECAPTCHA_SITE_KEY === "string",
+      ).toBe(true);
+      expect(RECAPTCHA_SECRET_KEY === undefined || typeof RECAPTCHA_SECRET_KEY === "string").toBe(
         true,
       );
       expect(SLACK_WEBHOOKS.ALERTS).toBeUndefined();
@@ -61,7 +66,9 @@ describe("Constants", () => {
     it("should reflect test env flags", () => {
       expect(NODE_ENV).toBe("test");
       expect(isDevelopment).toBe(false);
-      expect(isStaging).toBe(true);
+      // Under the test runner NODE_ENV === "test", so neither staging nor
+      // production flags are set. `isStaging` only maps to NODE_ENV === "staging".
+      expect(isStaging).toBe(false);
       expect(isProduction).toBe(false);
       expect(LOG_LEVEL === undefined || typeof LOG_LEVEL === "string").toBe(true);
     });
@@ -86,7 +93,7 @@ describe("Constants", () => {
     });
 
     it("should expose continent constants", () => {
-      expect(CONTINENTS["EU"]).toBe("Europe");
+      expect(CONTINENTS.EU).toBe("Europe");
       expect(CONTINENT_CODES.includes("NA")).toBe(true);
       expect(CONTINENT_CODES.length).toBe(7);
     });

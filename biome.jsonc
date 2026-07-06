@@ -1,7 +1,16 @@
 {
   "$schema": "https://biomejs.dev/schemas/latest/schema.json",
   "extends": ["@kumix/biome-config/base"],
-  "files": {
-    "includes": ["!!**/test"]
-  }
+  "overrides": [
+    {
+      "includes": ["**/test/**", "**/*.test.*"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ]
 }

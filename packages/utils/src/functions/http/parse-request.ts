@@ -66,7 +66,7 @@ export interface ParsedRequest {
  * export function middleware(req: NextRequest) {
  *   const { domain, path, fullPath, key } = parse(req);
  *
- *   console.log(domain);   // e.g., "api.kumix.com"
+ *   console.log(domain);   // e.g., "api.kumix.io"
  *   console.log(path);     // e.g., "/v1/users"
  *   console.log(fullPath); // e.g., "/v1/users?page=1"
  *   console.log(key);      // e.g., "v1"
@@ -93,12 +93,10 @@ export const parse =
   // biome-ignore lint/suspicious/noExplicitAny: disable
   (req: any): ParsedRequest => {
     // Extract and normalize domain
-    let domain = req.headers.get("host") as string;
+    const rawHost = req.headers.get("host");
+    const domain = (rawHost || "").replace(/^www\./, "").toLowerCase();
 
-    // Remove www. prefix and convert to lowercase for consistency
-    domain = domain.replace(/^www\./, "").toLowerCase();
-
-    // Extract pathname from URL (e.g., kumix.com/stats/github -> /stats/github)
+    // Extract pathname from URL (e.g., kumix.io/stats/github -> /stats/github)
     const path = req.nextUrl.pathname;
 
     // Extract and process search parameters
@@ -109,11 +107,20 @@ export const parse =
     // Construct full path including query parameters
     const fullPath = `${path}${searchParamsString}`;
 
-    // Extract path components with proper URL decoding
-    // This handles international characters (Hebrew, Arabic, Chinese, etc.)
+    // Extract path components with proper URL decoding.
+    // This handles international characters (Hebrew, Arabic, Chinese, etc.).
+    // `decodeURIComponent` throws URIError on malformed sequences (e.g. stray
+    // `%`); fall back to the raw segment so a bad URL never crashes the request.
+    const safeDecode = (value: string): string => {
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return value;
+      }
+    };
     const pathSegments = path.split("/").filter(Boolean);
-    const key = pathSegments.length > 0 ? decodeURIComponent(pathSegments[0]) : "";
-    const fullKey = path.length > 1 ? decodeURIComponent(path.slice(1)) : "";
+    const key = pathSegments.length > 0 ? safeDecode(pathSegments[0]) : "";
+    const fullKey = path.length > 1 ? safeDecode(path.slice(1)) : "";
 
     return {
       domain,

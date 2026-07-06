@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { NodemailerConfig, ResendConfig } from "../src/types";
 import {
   getEmailEnvVars,
   hasEmailConfig,
@@ -11,6 +10,7 @@ import {
   validateNodemailerEnvVars,
   validateResendEnvVars,
 } from "../src/index";
+import type { NodemailerConfig, ResendConfig } from "../src/types";
 
 function resendEnv() {
   return {
@@ -66,7 +66,10 @@ describe("Email Configuration", () => {
       });
 
       it("should return null when explicit env has no api key", () => {
-        const config = loadResendConfig({ KUMIX_EMAIL_FROM_NAME: "A", KUMIX_EMAIL_FROM_EMAIL: "a@b.com" });
+        const config = loadResendConfig({
+          KUMIX_EMAIL_FROM_NAME: "A",
+          KUMIX_EMAIL_FROM_EMAIL: "a@b.com",
+        });
         expect(config).toBeNull();
       });
 
@@ -117,7 +120,10 @@ describe("Email Configuration", () => {
 
     describe("getEmailEnvVars", () => {
       it("should return masked values from explicit env", () => {
-        const vars = getEmailEnvVars({ KUMIX_EMAIL_RESEND_API_KEY: "secret", KUMIX_EMAIL_FROM_EMAIL: "a@b.com" });
+        const vars = getEmailEnvVars({
+          KUMIX_EMAIL_RESEND_API_KEY: "secret",
+          KUMIX_EMAIL_FROM_EMAIL: "a@b.com",
+        });
         expect(vars.KUMIX_EMAIL_RESEND_API_KEY).toBe("***");
         expect(vars.KUMIX_EMAIL_FROM_EMAIL).toBe("a@b.com");
       });
@@ -197,7 +203,10 @@ describe("Email Configuration", () => {
     });
 
     it("should include replyTo when set", () => {
-      Object.assign(process.env, { ...resendEnv(), KUMIX_EMAIL_REPLY_TO: "reply@example.com" });
+      Object.assign(process.env, {
+        ...resendEnv(),
+        KUMIX_EMAIL_REPLY_TO: "reply@example.com",
+      });
       expect(loadResendConfig()?.replyTo).toBe("reply@example.com");
     });
   });
@@ -224,12 +233,27 @@ describe("Email Configuration", () => {
     });
 
     it("should treat secure=false correctly", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_SECURE: "false" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_SECURE: "false",
+      });
       expect((loadNodemailerConfig() as NodemailerConfig).smtp.secure).toBe(false);
     });
 
     it("should treat missing secure as false", () => {
       Object.assign(process.env, nodemailerEnv());
+      expect((loadNodemailerConfig() as NodemailerConfig).smtp.secure).toBe(false);
+    });
+
+    it("should normalize SECURE case-insensitively (True/TRUE/YES/1)", () => {
+      for (const val of ["True", "TRUE", "YES", "Yes", "1"]) {
+        Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_SECURE: val });
+        expect((loadNodemailerConfig() as NodemailerConfig).smtp.secure).toBe(true);
+      }
+    });
+
+    it("should treat arbitrary SECURE values as false", () => {
+      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_SECURE: "maybe" });
       expect((loadNodemailerConfig() as NodemailerConfig).smtp.secure).toBe(false);
     });
 
@@ -252,7 +276,11 @@ describe("Email Configuration", () => {
     });
 
     it("should parse port numbers correctly", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "465", KUMIX_EMAIL_SMTP_SECURE: "true" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "465",
+        KUMIX_EMAIL_SMTP_SECURE: "true",
+      });
       const cfg = loadNodemailerConfig() as NodemailerConfig | null;
       expect(cfg?.smtp.port).toBe(465);
       expect(cfg?.smtp.secure).toBe(true);
@@ -349,45 +377,66 @@ describe("Email Configuration", () => {
     });
 
     it("should fail when port is too high (70000)", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "70000" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "70000",
+      });
       const result = validateNodemailerEnvVars();
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("SMTP_PORT must be a valid port number (1-65535)");
     });
 
     it("should fail when port is 0", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "0" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "0",
+      });
       const result = validateNodemailerEnvVars();
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("SMTP_PORT must be a valid port number (1-65535)");
     });
 
     it("should fail when port is negative", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "-1" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "-1",
+      });
       const result = validateNodemailerEnvVars();
       expect(result.valid).toBe(false);
     });
 
     it("should fail when port is non-numeric", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "abc" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "abc",
+      });
       const result = validateNodemailerEnvVars();
       expect(result.valid).toBe(false);
     });
 
     it("should accept port 1", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "1" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "1",
+      });
       const result = validateNodemailerEnvVars();
       expect(result.valid).toBe(true);
     });
 
     it("should accept port 65535", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "65535" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "65535",
+      });
       const result = validateNodemailerEnvVars();
       expect(result.valid).toBe(true);
     });
 
     it("should fail when port is 65536", () => {
-      Object.assign(process.env, { ...nodemailerEnv(), KUMIX_EMAIL_SMTP_PORT: "65536" });
+      Object.assign(process.env, {
+        ...nodemailerEnv(),
+        KUMIX_EMAIL_SMTP_PORT: "65536",
+      });
       const result = validateNodemailerEnvVars();
       expect(result.valid).toBe(false);
     });
@@ -501,13 +550,27 @@ describe("Email Configuration", () => {
     });
 
     it("should handle whitespace-only environment variables", () => {
+      // fromName/fromEmail/host/replyTo are trimmed before the presence check,
+      // so whitespace-only values are now treated as missing and the config
+      // loader returns null instead of producing a config with empty fields.
+      // (apiKey/pass are intentionally NOT trimmed — those are returned as-is.)
       process.env.KUMIX_EMAIL_RESEND_API_KEY = "   ";
       process.env.KUMIX_EMAIL_FROM_NAME = "   ";
+      process.env.KUMIX_EMAIL_FROM_EMAIL = "test@example.com";
+      const config = loadEmailConfig();
+      expect(config).toBeNull();
+    });
+
+    it("should accept config when only apiKey is whitespace (apiKey is not trimmed)", () => {
+      // apiKey is not trimmed, so a whitespace apiKey still counts as present.
+      process.env.KUMIX_EMAIL_RESEND_API_KEY = "   ";
+      process.env.KUMIX_EMAIL_FROM_NAME = "App";
       process.env.KUMIX_EMAIL_FROM_EMAIL = "test@example.com";
       const config = loadEmailConfig();
       expect(config).toBeTruthy();
       expect(config?.provider).toBe("resend");
       expect((config as ResendConfig).apiKey).toBe("   ");
+      expect((config as ResendConfig).from.name).toBe("App");
     });
   });
 });

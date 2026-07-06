@@ -1,12 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { verifyRecaptchaToken } from "../../src/functions/http/recaptcha";
-import { getIPAddress } from "../../src/functions/http/ip";
-import { fetcher, fetcherSWR } from "../../src/functions/http/fetcher";
-import { fetchWithTimeout } from "../../src/functions/http/fetch-with-timeout";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { fetchWithRetry } from "../../src/functions/http/fetch-with-retry";
+import { fetchWithTimeout } from "../../src/functions/http/fetch-with-timeout";
+import { fetcher, fetcherSWR } from "../../src/functions/http/fetcher";
+import { getIPAddress } from "../../src/functions/http/ip";
+import { verifyRecaptchaToken } from "../../src/functions/http/recaptcha";
 
 vi.mock("../../src/constants/env", () => ({
   NEXT_PUBLIC_RECAPTCHA_SITE_KEY: "test-site-key",
+  RECAPTCHA_SECRET_KEY: "test-secret-key",
 }));
 
 describe("verifyRecaptchaToken", () => {
@@ -125,6 +127,21 @@ describe("fetchWithRetry", () => {
     await expect(
       fetchWithRetry("/err", undefined, { maxRetries: 1, retryDelay: 1, timeout: 20 }),
     ).rejects.toThrow(/bad request|Failed after/);
+  });
+
+  it("does not retry 403 and throws immediately", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+    // 403 surfaces as "Forbidden" now (401 → "Unauthorized"). Both are
+    // non-retryable auth statuses.
+    await expect(
+      fetchWithRetry("/forbidden", undefined, { maxRetries: 5, retryDelay: 1, timeout: 20 }),
+    ).rejects.toThrow("Forbidden");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
   });
 
   it("throws after exhausting retries on network error", async () => {

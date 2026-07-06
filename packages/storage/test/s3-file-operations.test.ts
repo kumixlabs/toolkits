@@ -195,8 +195,6 @@ describe("S3 FileOperations", () => {
       publicUrl: undefined,
       endpoint: undefined,
     });
-    expect(ops3.getPublicUrl("a/b.txt")).toBe(
-      "https://bucket.s3.us-east-1.amazonaws.com/a/b.txt",
-    );
+    expect(ops3.getPublicUrl("a/b.txt")).toBe("https://bucket.s3.us-east-1.amazonaws.com/a/b.txt");
   });
 });

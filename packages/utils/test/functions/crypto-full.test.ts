@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { baseId, baseIdCustom } from "../../src/functions/crypto/base-id";
 import { generateRandomString } from "../../src/functions/crypto/generate-random-string";
 import { hashStringSHA256 } from "../../src/functions/crypto/hash-string";
 import {
@@ -14,7 +16,6 @@ import {
   needsRehash,
   verifyPassword,
 } from "../../src/functions/crypto/password";
-import { baseId, baseIdCustom } from "../../src/functions/crypto/base-id";
 
 vi.mock("jsonwebtoken", async (orig) => await orig());
 vi.mock("bcryptjs", async (orig) => await orig());
@@ -36,9 +37,7 @@ describe("generateRandomString", () => {
 describe("hashStringSHA256", () => {
   it("hashes a string to a known SHA-256 hex digest", async () => {
     const hash = await hashStringSHA256("hello world");
-    expect(hash).toBe(
-      "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
-    );
+    expect(hash).toBe("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
     expect(hash).toHaveLength(64);
   });
 
@@ -126,14 +125,14 @@ describe("verifyJWT", () => {
   it("reports invalid token format", () => {
     const result = verifyJWT("not-a-jwt", SECRET);
     expect(result.isValid).toBe(false);
-    expect(result.error).toBe("Invalid token format");
+    expect(result.error).toBe("Invalid token");
   });
 
   it("reports invalid signature as JsonWebTokenError", () => {
     const token = generateJWT({ userId: "1", email: "u@x.com" }, SECRET);
     const result = verifyJWT(token as string, "wrong-secret");
     expect(result.isValid).toBe(false);
-    expect(result.error).toBe("Invalid token format");
+    expect(result.error).toBe("Invalid token");
   });
 });
 

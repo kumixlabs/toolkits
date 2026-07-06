@@ -33,8 +33,16 @@ describe("Storage Config Utilities", () => {
     process.env.KUMIX_S3_BUCKET = "my-bucket";
     process.env.KUMIX_S3_ACCESS_KEY_ID = "AKIA12345678";
     process.env.KUMIX_S3_SECRET_ACCESS_KEY = "secretkeyvalue";
+    process.env.KUMIX_CLOUDINARY_API_KEY = "cloudkey123";
     const vars = getStorageEnvVars();
     expect(vars.KUMIX_S3_PROVIDER).toBe("aws");
-    expect(vars.KUMIX_S3_SECRET_ACCESS_KEY).toMatch(/^\w{4}\*\*\*$/);
+    // Non-sensitive values stay in plaintext.
+    expect(vars.KUMIX_S3_REGION).toBe("us-east-1");
+    expect(vars.KUMIX_S3_BUCKET).toBe("my-bucket");
+    // Sensitive values are fully masked to "****" (previously leaked plaintext
+    // for ACCESS_KEY_ID / API_KEY, and only partially masked SECRET_ACCESS_KEY).
+    expect(vars.KUMIX_S3_ACCESS_KEY_ID).toBe("****");
+    expect(vars.KUMIX_S3_SECRET_ACCESS_KEY).toBe("****");
+    expect(vars.KUMIX_CLOUDINARY_API_KEY).toBe("****");
   });
 });

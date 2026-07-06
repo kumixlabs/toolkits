@@ -1,13 +1,32 @@
 #!/usr/bin/env node
 
 import { access, readFile } from "node:fs/promises";
-import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { glob } from "glob";
 import { z } from "zod";
+
+// Get current directory for ESM modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// Get the correct packages directory relative to this file
+// This works regardless of where the server is run from
+const PACKAGES_DIR = resolve(__dirname, "..", "..");
+
+// Read this package's version at startup so the advertised server version
+// stays in sync with package.json (avoids drift between the two). Reading the
+// file at runtime keeps it outside `rootDir`/tsc's source graph.
+let SERVER_VERSION = "0.0.0";
+try {
+  const pkgJsonPath = resolve(__dirname, "..", "package.json");
+  const pkgJson = JSON.parse(await readFile(pkgJsonPath, "utf-8"));
+  if (typeof pkgJson.version === "string") SERVER_VERSION = pkgJson.version;
+} catch {
+  // keep default
+}
 
 // Check for test flag
 const isTestMode = process.argv.includes("--test");
@@ -17,25 +36,39 @@ if (isTestMode) {
   process.exit(0);
 }
 
-// Get current directory for ESM modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// Get the correct packages directory relative to this file
-// This works regardless of where the server is run from
-const PACKAGES_ROOT = resolve(__dirname, "..", "..");
-const PACKAGES_DIR = PACKAGES_ROOT;
+interface ComponentInfo {
+  name: string;
+  package: string;
+  path: string;
+}
+
+interface PackageInfo {
+  name: string;
+  version: string;
+  description: string;
+  main: string;
+  exports: string[];
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+  srcDir: string | null;
+  packageDir: string;
+  componentFiles: string[];
+  category: string;
+}
 
 // Package information cache
-// biome-ignore lint/suspicious/noExplicitAny: <>
-const packages = new Map<string, any>();
-// biome-ignore lint/suspicious/noExplicitAny: <>
-const components = new Map<string, any>();
+const packages = new Map<string, PackageInfo>();
+// Components indexed by basename. Multiple files across packages can share a
+// name (every package has index.ts, config.ts, helpers.ts, types.ts), so we
+// store an array per name instead of overwriting on collision.
+const components = new Map<string, ComponentInfo[]>();
 
 class KumixToolkitsMCPServer {
   private async loadPackageInfo(): Promise<void> {
     try {
-      // Scan packages directory (including subdirectories)
+      // Scan packages directory (exclude node_modules and dist)
       const packageDirs = await glob(join(PACKAGES_DIR, "**/package.json"), {
+        ignore: ["**/node_modules/**", "**/dist/**"],
         windowsPathsNoEscape: true,
       });
 
@@ -74,7 +107,7 @@ class KumixToolkitsMCPServer {
               .filter((key) => key !== "./package.json")
               .map((key) => key.replace("./", ""));
 
-            const packageInfo = {
+            const packageInfo: PackageInfo = {
               name: packageJson.name,
               version: packageJson.version,
               description: packageJson.description,
@@ -90,22 +123,31 @@ class KumixToolkitsMCPServer {
 
             packages.set(packageJson.name, packageInfo);
 
-            // Index components only if src directory exists
+            // Index components only if src directory exists. Multiple files
+            // (across packages) can share the same basename — append to the
+            // existing array so `find_component index` returns every match
+            // instead of just the last one seen.
             if (hasSrcDir) {
               for (const componentFile of componentFiles) {
                 const componentName = basename(componentFile, extname(componentFile));
                 const relativePath = relative(srcDir, componentFile).replace(/\\/g, "/");
 
-                components.set(componentName, {
+                const list = components.get(componentName) ?? [];
+                list.push({
                   name: componentName,
                   package: packageJson.name,
                   path: relativePath,
-                  fullPath: componentFile,
                 });
+                components.set(componentName, list);
               }
             }
           }
-        } catch (_error) {}
+        } catch (error) {
+          // A malformed package.json used to silently drop the entire package
+          // from the listing with no signal. Surface the failure so it is
+          // diagnosable instead.
+          console.error(`Skipping ${packageJsonPath}:`, error);
+        }
       }
     } catch (error) {
       console.error("Error loading package info:", error);
@@ -113,11 +155,14 @@ class KumixToolkitsMCPServer {
   }
 
   private getPackageCategory(packageName: string): string {
+    // Only categories that actually match packages in this workspace are
+    // returned. The previous `config` and `toolkits` branches never matched
+    // any real `@kumix/*` package, so clients filtering by them got empty
+    // results — keep the enum (and filter) honest.
     if (packageName.includes("email")) return "email";
     if (packageName.includes("storage")) return "storage";
     if (packageName.includes("utils")) return "utils";
-    if (packageName.includes("config")) return "config";
-    return "toolkits";
+    return "other";
   }
 
   async listPackages(category: string = "all") {
@@ -182,7 +227,24 @@ class KumixToolkitsMCPServer {
       content: [
         {
           type: "text" as "text",
-          text: JSON.stringify(pkg, null, 2),
+          text: JSON.stringify(
+            {
+              // Surface a curated, sanitized subset of the cached package info.
+              // Previously the raw cache entry was returned, leaking absolute
+              // filesystem paths (`packageDir`, `srcDir`) and the full devDeps
+              // list which isn't useful to clients.
+              name: pkg.name,
+              version: pkg.version,
+              description: pkg.description,
+              main: pkg.main,
+              exports: pkg.exports,
+              category: pkg.category,
+              dependencies: pkg.dependencies,
+              componentCount: pkg.componentFiles.length,
+            },
+            null,
+            2,
+          ),
         },
       ],
     };
@@ -193,9 +255,14 @@ class KumixToolkitsMCPServer {
       await this.loadPackageInfo();
     }
 
-    let matchingComponents = Array.from(components.values()).filter((comp) =>
-      comp.name.toLowerCase().includes(componentName.toLowerCase()),
-    );
+    // Components are now keyed by basename with an array value (to handle
+    // cross-package name collisions like `index.ts`). Flatten + filter.
+    let matchingComponents: ComponentInfo[] = [];
+    for (const [name, list] of components) {
+      if (name.toLowerCase().includes(componentName.toLowerCase())) {
+        matchingComponents.push(...list);
+      }
+    }
 
     if (packageFilter) {
       matchingComponents = matchingComponents.filter((comp) =>
@@ -244,16 +311,57 @@ class KumixToolkitsMCPServer {
     }
 
     // Handle packages without src directory (config packages)
-    let fullPath: string;
-    if (pkg.srcDir) {
-      fullPath = join(pkg.srcDir, componentPath);
-    } else {
-      // For packages without src, use package root directory
-      fullPath = join(pkg.packageDir, componentPath);
+    const baseDir = pkg.srcDir || pkg.packageDir;
+    const fullPath = resolve(baseDir, componentPath);
+
+    // Restrict to safe source extensions so this tool can't be used to read
+    // arbitrary files (package.json, .env, lock files, etc.).
+    const allowedExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
+    if (!allowedExtensions.has(extname(fullPath).toLowerCase())) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                error: `Unsupported file type. Allowed extensions: ${[...allowedExtensions].join(", ")}`,
+                package: packageName,
+                requestedPath: componentPath,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    }
+
+    // Prevent path traversal. The previous `startsWith` check was prefix-based
+    // and matched sibling directories whose name began with the same string
+    // (e.g. `/.../packages/email` also matched `/.../packages/email-secret`).
+    // Use a separator-aware comparison instead.
+    const normalizedBase = resolve(baseDir);
+    const isInsideBase = fullPath === normalizedBase || fullPath.startsWith(normalizedBase + sep);
+    if (!isInsideBase) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                error: `Access denied: path escapes package directory`,
+                package: packageName,
+                requestedPath: componentPath,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
     }
 
     try {
-      await access(fullPath);
       const code = await readFile(fullPath, "utf-8");
 
       return {
@@ -265,7 +373,6 @@ class KumixToolkitsMCPServer {
                 package: packageName,
                 component: componentPath,
                 code,
-                fullPath,
               },
               null,
               2,
@@ -282,7 +389,6 @@ class KumixToolkitsMCPServer {
               {
                 error: `Component file not found: ${componentPath}`,
                 package: packageName,
-                searchedPath: fullPath,
               },
               null,
               2,
@@ -368,130 +474,69 @@ class KumixToolkitsMCPServer {
     }
   }
 
-  private generateUsageExample(packageName: string, componentName?: string): string {
-    const _shortName = packageName.replace("@kumix/", "");
-
+  private generateUsageExample(packageName: string, _componentName?: string): string {
     if (packageName.includes("email")) {
       return `// Email usage example
-import { EmailService } from "${packageName}";
-import { WelcomeEmail } from "${packageName}/components";
+import { createEmail } from "${packageName}";
 
-const email = new EmailService({
+const email = createEmail({
   provider: "resend",
   apiKey: process.env.RESEND_API_KEY!,
+  from: { name: "My App", email: "noreply@myapp.com" },
 });
 
-await email.send({
+// Plain-HTML send
+await email.sendEmail({
   to: "user@example.com",
   subject: "Welcome!",
-  component: <WelcomeEmail name="John" />
-});`;
+  html: "<h1>Welcome!</h1>",
+});
+
+// React template send (requires react + react-email peers)
+import { renderEmailTemplate } from "${packageName}/helpers";
+const html = await renderEmailTemplate(WelcomeEmail, { name: "John" });
+await email.sendEmail({ to: "user@example.com", subject: "Hi", html });`;
     }
 
     if (packageName.includes("storage")) {
       return `// Storage usage example
-import { StorageService } from "${packageName}";
-import { S3Provider } from "${packageName}/s3";
+import { createS3 } from "${packageName}/s3";
 
-const storage = new StorageService({
-  provider: new S3Provider({
-    region: "us-east-1",
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
-    }
-  })
+const storage = createS3(undefined, {
+  KUMIX_S3_PROVIDER: "aws",
+  KUMIX_S3_REGION: "us-east-1",
+  KUMIX_S3_BUCKET: "my-bucket",
+  KUMIX_S3_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID!,
+  KUMIX_S3_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY!,
 });
 
-await storage.upload("file.txt", Buffer.from("Hello World"));`;
+await storage.upload({ key: "file.txt", file: "Hello World" });
+const dl = await storage.download({ key: "file.txt" });
+const list = await storage.list({ prefix: "" });`;
     }
 
     if (packageName.includes("utils")) {
       return `// Utils usage example
-import { slugify, generateId, hashPassword } from "${packageName}";
-import { jwtSign } from "${packageName}/server";
+import { slugify, nanoid, cuid } from "${packageName}";
+import { generateJWT, hashPassword } from "${packageName}/server";
 
-const id = generateId();
+const id = nanoid();
 const slug = slugify("Hello World");
-const hashed = await hashPassword("password123");
-const token = jwtSign({ userId: id });`;
-    }
-
-    if (packageName.includes("config")) {
-      if (packageName.includes("biome")) {
-        return `// Biome config usage example
-// Add this to your project's biome.json
-{
-  "extends": ["./node_modules/${packageName}/base.json"],
-  "files": {
-    "include": ["src/**/*"],
-    "ignore": ["dist/**/*"]
-  }
-}
-
-
-// Or extend in biome.json:
-import biomeConfig from "${packageName}/base";
-export default {
-  ...biomeConfig,
-  // Your custom overrides
-};`;
-      }
-
-      if (packageName.includes("eslint")) {
-        return `// ESLint config usage example
-// eslint.config.js
-import { configs } from "${packageName}";
-
-export default [
-  // For full configuration with Prettier and all plugins
-  // ...configs.base, // or configs.reactFull, configs.viteFull depending on package
-
-  // For fast configuration optimized for Biome (recommended)
-  ...configs.fast, // or configs.reactFast, configs.viteFast depending on package
-  {
-    languageOptions: {
-      parserOptions: {
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-  },
-];`;
-      }
-
-      if (packageName.includes("tsconfig")) {
-        return `// TypeScript config usage example
-// Extend in your tsconfig.json:
-{
-  "extends": "${packageName}",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
-  }
-}
-
-// Or in tsconfig.base.json:
-{
-  "extends": "${packageName}",
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}`;
-      }
+const token = generateJWT({ userId: id, email: "u@x.com" }, process.env.JWT_SECRET!);
+const hashed = await hashPassword("password123");`;
     }
 
     // Default fallback
     return `// Example usage for ${packageName}
-import { main } from "${packageName}";
-
-// Use the main export
-const result = main();`;
+// See the package README for available exports and API.`;
   }
 }
 
-// Create server instance
+// Create server instance. Version is sourced from package.json above so the
+// advertised version stays in sync with the published package.
 const server = new McpServer({
   name: "Kumix Toolkits",
-  version: "0.1.0",
+  version: SERVER_VERSION,
 });
 
 // Instance of our business logic
@@ -504,7 +549,7 @@ server.registerTool(
     description: "List all available Kumix toolkits packages",
     inputSchema: {
       category: z
-        .enum(["email", "storage", "utils", "config", "toolkits", "all"])
+        .enum(["email", "storage", "utils", "other", "all"])
         .default("all")
         .describe("Filter packages by category"),
     },

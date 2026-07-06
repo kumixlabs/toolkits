@@ -157,11 +157,33 @@ export async function fetcher<T>(
     body: payload,
   });
 
-  const data = await res.json();
+  // Parse the JSON body defensively — non-JSON responses (HTML error pages,
+  // empty 204 bodies) would otherwise throw an opaque SyntaxError.
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    data = undefined;
+  }
 
   if (options?.log && isDevelopment) {
     console.log(`[request] ${endpoint}`, data);
   }
 
-  return data?.data as T;
+  // Treat non-2xx as an error instead of returning `undefined` as data —
+  // matches the behavior of `fetcherSWR` and surfaces failures to callers.
+  if (!res.ok) {
+    const message =
+      (typeof data === "object" && data !== null && "error" in data
+        ? String((data as Record<string, unknown>).error)
+        : `HTTP error ${res.status}`) || `HTTP error ${res.status}`;
+    const error = new Error(message) as Error & { status: number };
+    error.status = res.status;
+    throw error;
+  }
+
+  // Unwrap `{ data: ... }` envelopes when present, otherwise return the body as-is.
+  return typeof data === "object" && data !== null && "data" in data
+    ? (data as { data: T }).data
+    : (data as T);
 }

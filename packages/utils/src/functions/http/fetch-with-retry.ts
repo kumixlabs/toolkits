@@ -59,7 +59,9 @@ export async function fetchWithRetry(
   const { timeout = 5000, maxRetries = 10, retryDelay = 1000 } = options;
 
   let lastError: Error | null = null;
+  let httpError: Error | null = null;
 
+  let lastStatus = 0;
   for (let i = 0; i < maxRetries; i++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -78,29 +80,33 @@ export async function fetchWithRetry(
         return response;
       }
 
-      // Handle rate limiting and server errors
+      lastStatus = response.status;
+
+      // Handle rate limiting and server errors (retryable)
       if (response.status === 429 || response.status >= 500) {
+        httpError = new Error(`HTTP error ${response.status}`);
         const delay = retryDelay + i ** 2 * 50;
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
 
-      // Handle unauthorized errors
-      if (response.status === 403) {
-        throw new Error("Unauthorized");
+      // Handle unauthorized errors (non-retryable). Both 401 and 403 typically
+      // indicate auth problems that retrying won't fix; surface immediately.
+      if (response.status === 401 || response.status === 403) {
+        httpError = new Error(response.status === 401 ? "Unauthorized" : "Forbidden");
+        break;
       }
 
-      // Handle other errors
-      if (!response.ok) {
-        let errorMessage: string;
-        try {
-          const error = await response.json();
-          errorMessage = error.error || `HTTP error ${response.status}`;
-        } catch {
-          errorMessage = `HTTP error ${response.status}`;
-        }
-        throw new Error(errorMessage);
+      // Handle other HTTP errors (non-retryable)
+      let errorMessage: string;
+      try {
+        const error = await response.json();
+        errorMessage = error?.error || `HTTP error ${response.status}`;
+      } catch {
+        errorMessage = `HTTP error ${response.status}`;
       }
+      httpError = new Error(errorMessage);
+      break;
     } catch (error) {
       clearTimeout(timeoutId);
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -116,7 +122,14 @@ export async function fetchWithRetry(
     }
   }
 
+  // Non-retryable HTTP error from inside the loop
+  if (httpError) {
+    throw httpError;
+  }
+
   // This should never be reached due to the throw in the last retry,
-  // but TypeScript needs it for type safety
-  throw new Error(`Failed after ${maxRetries} retries`);
+  // but TypeScript needs it for type safety. Surface last seen status.
+  throw new Error(
+    `Failed after ${maxRetries} retries${lastStatus ? ` (last status: ${lastStatus})` : ""}`,
+  );
 }

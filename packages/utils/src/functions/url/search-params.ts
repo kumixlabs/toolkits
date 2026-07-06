@@ -42,9 +42,15 @@ export const getSearchParams = (url: string): Record<string, string> => {
   // Create a params object
   const params = {} as Record<string, string>;
 
-  new URL(url).searchParams.forEach((val, key) => {
-    params[key] = val;
-  });
+  // Wrap in try/catch for consistency with getParamsFromURL — a malformed
+  // (relative, empty) URL used to throw TypeError and crash the caller.
+  try {
+    new URL(url).searchParams.forEach((val, key) => {
+      params[key] = val;
+    });
+  } catch {
+    // return whatever was collected (empty object on parse failure)
+  }
 
   return params;
 };
@@ -89,18 +95,22 @@ export const getSearchParams = (url: string): Record<string, string> => {
 export const getSearchParamsWithArray = (url: string): Record<string, string | string[]> => {
   const params = {} as Record<string, string | string[]>;
 
-  new URL(url).searchParams.forEach((val, key) => {
-    if (key in params) {
-      const param = params[key];
-      if (Array.isArray(param)) {
-        param.push(val);
+  try {
+    new URL(url).searchParams.forEach((val, key) => {
+      if (key in params) {
+        const param = params[key];
+        if (Array.isArray(param)) {
+          param.push(val);
+        } else {
+          params[key] = [param as string, val];
+        }
       } else {
-        params[key] = [param as string, val];
+        params[key] = val;
       }
-    } else {
-      params[key] = val;
-    }
-  });
+    });
+  } catch {
+    // return whatever was collected (empty object on parse failure)
+  }
 
   return params;
 };

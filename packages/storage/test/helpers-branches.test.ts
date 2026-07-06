@@ -18,13 +18,13 @@ import {
 } from "../src/helpers";
 
 describe("Helpers branch coverage", () => {
-  it("generateFileKey without prefix treats last segment as extension", () => {
+  it("generateFileKey without prefix uses whole name as base when no extension", () => {
     const key = generateFileKey("noext");
-    expect(key).toMatch(/^-\d{13}-[a-z0-9]{6}\.noext$/);
+    expect(key).toMatch(/^noext-\d{13}-[a-z0-9]{6}$/);
   });
 
-  it("getFileExtension for file without dot", () => {
-    expect(getFileExtension("nodot")).toBe(".nodot");
+  it("getFileExtension for file without dot returns empty", () => {
+    expect(getFileExtension("nodot")).toBe("");
   });
 
   it("validateS3Key rejects empty key", () => {

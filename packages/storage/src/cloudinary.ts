@@ -45,6 +45,7 @@ export { CloudinaryService } from "./services/cloudinary";
 export function createCloudinary(): CloudinaryService;
 export function createCloudinary(config: CloudinaryConfig): CloudinaryService;
 export function createCloudinary(config: CloudinaryConfig, env: EnvRecord): CloudinaryService;
+export function createCloudinary(config: undefined, env: EnvRecord): CloudinaryService;
 export function createCloudinary(config?: CloudinaryConfig, env?: EnvRecord): CloudinaryService {
   if (config) {
     return new CloudinaryService(config);

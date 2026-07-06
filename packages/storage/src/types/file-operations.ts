@@ -8,7 +8,9 @@ import type { FileInfo } from "./base";
 // File upload options
 export interface UploadOptions {
   key: string;
-  file: Buffer | Uint8Array | string;
+  // `Uint8Array` (cross-runtime). Node callers may still pass a `Buffer`,
+  // which is a `Uint8Array` subtype and remains assignable here.
+  file: Uint8Array | string;
   contentType?: string;
   metadata?: Record<string, string>;
   cacheControl?: string;
@@ -37,8 +39,8 @@ export interface DownloadOptions {
 // File download result
 export interface DownloadResult {
   success: boolean;
-  content?: Buffer; // Main content field
-  data?: Buffer; // Alias for backward compatibility
+  content?: Uint8Array; // Main content field
+  data?: Uint8Array; // Alias for backward compatibility
   contentType?: string;
   contentLength?: number;
   lastModified?: Date;

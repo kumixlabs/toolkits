@@ -2,8 +2,6 @@ import { type EnvRecord, hasEmailConfig, loadEmailConfig } from "./config";
 import { EmailService } from "./services";
 import type { EmailConfig, EmailProvider, NodemailerConfig, ResendConfig } from "./types";
 
-export type { EnvRecord } from "./config";
-
 export function createEmail(config?: EmailConfig, env?: EnvRecord): EmailService {
   if (config) return new EmailService(config);
 

@@ -1,22 +1,20 @@
 import { describe, expect, it } from "vitest";
-import {
-  getUrlFromString,
-  getUrlObjFromString,
-  getUrlFromStringIfValid,
-} from "../../src/functions/url/url-conversion";
+
 import {
   generateDomainFromName,
-  validDomainRegex,
-  validSlugRegex,
-  getSubdomain,
   getApexDomain,
   getDomainWithoutWWW,
+  getSubdomain,
+  validDomainRegex,
+  validSlugRegex,
 } from "../../src/functions/url/domains";
-import { getPrettyUrl, getSlug } from "../../src/functions/url/url-formatting";
+import { linkConstructor, linkConstructorSimple } from "../../src/functions/url/link-constructor";
 import {
-  linkConstructor,
-  linkConstructorSimple,
-} from "../../src/functions/url/link-constructor";
+  getUrlFromString,
+  getUrlFromStringIfValid,
+  getUrlObjFromString,
+} from "../../src/functions/url/url-conversion";
+import { getPrettyUrl, getSlug } from "../../src/functions/url/url-formatting";
 
 describe("url-conversion", () => {
   it("getUrlFromString returns valid url unchanged", () => {

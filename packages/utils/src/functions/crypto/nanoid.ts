@@ -5,6 +5,9 @@
 
 import { customAlphabet } from "nanoid";
 
+const DEFAULT_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const DEFAULT_SIZE = 7;
+
 /**
  * Generates a random alphanumeric ID of specified length
  * Uses a custom alphabet of numbers and letters (both cases)
@@ -30,10 +33,7 @@ import { customAlphabet } from "nanoid";
  * ```
  */
 export const nanoid = (chars?: number): string => {
-  return customAlphabet(
-    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-    chars || 7, // 7-character random string by default
-  )();
+  return customAlphabet(DEFAULT_ALPHABET, chars || DEFAULT_SIZE)();
 };
 
 /**

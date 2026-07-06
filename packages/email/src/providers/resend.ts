@@ -3,9 +3,9 @@
  * Provides email sending functionality using the Resend service
  */
 
-import type { CreateEmailOptions } from "resend";
-import { Resend } from "resend";
+import type { CreateEmailOptions, Resend } from "resend";
 
+import { formatEmailAddress, stripCrlf } from "../helpers";
 import type {
   EmailResult,
   EmailValidationResult,
@@ -45,7 +45,7 @@ import type {
  * ```
  */
 export class ResendProvider implements IEmailProvider {
-  private resend: Resend;
+  private _client: Resend | null = null;
   private config: ResendConfig;
 
   /**
@@ -59,8 +59,16 @@ export class ResendProvider implements IEmailProvider {
     if (!config.apiKey) {
       throw new Error("Resend API key is required");
     }
+  }
 
-    this.resend = new Resend(config.apiKey);
+  // The SDK is loaded lazily so the `resend` peer dep isn't required at module
+  // load time. This lets consumers who only use Nodemailer import the package
+  // without installing `resend`.
+  private async getClient(): Promise<Resend> {
+    if (this._client) return this._client;
+    const { Resend } = await import("resend");
+    this._client = new Resend(this.config.apiKey);
+    return this._client;
   }
 
   /**
@@ -147,31 +155,41 @@ export class ResendProvider implements IEmailProvider {
    */
   async send(options: SendEmailOptions): Promise<EmailResult> {
     try {
-      const emailData: CreateEmailOptions = {
-        from: `${this.config.from.name} <${this.config.from.email}>`,
-        to: Array.isArray(options.to) ? options.to : [options.to],
-        subject: options.subject,
-        text: options.text || "",
+      // Build the message body. Resend requires at least one of html/text/react/template,
+      // and forcing `text: ""` would suppress its automatic text generation from html.
+      // - When `html` is provided, send `html` (Resend derives the text part). If the
+      //   caller also provided an explicit `text`, send that too instead of the derived one.
+      // - When no `html` is provided, fall back to `text` (empty string as the last resort).
+      const base = {
+        // Route `from` through formatEmailAddress so the display name is
+        // quoted/escaped and CR/LF is stripped (header-injection hardening).
+        from: formatEmailAddress(this.config.from.name, this.config.from.email),
+        to: (Array.isArray(options.to) ? options.to : [options.to]).map(stripCrlf),
+        subject: options.subject.replace(/[\r\n]/g, ""),
       };
 
+      const emailData: CreateEmailOptions = options.html
+        ? { ...base, html: options.html, ...(options.text ? { text: options.text } : {}) }
+        : { ...base, text: options.text || "" };
+
       if (options.cc) {
-        emailData.cc = Array.isArray(options.cc) ? options.cc : [options.cc];
+        emailData.cc = (Array.isArray(options.cc) ? options.cc : [options.cc]).map(stripCrlf);
       }
 
       if (options.bcc) {
-        emailData.bcc = Array.isArray(options.bcc) ? options.bcc : [options.bcc];
-      }
-
-      if (options.html) {
-        emailData.html = options.html;
+        emailData.bcc = (Array.isArray(options.bcc) ? options.bcc : [options.bcc]).map(stripCrlf);
       }
 
       if (this.config.replyTo) {
-        emailData.replyTo = this.config.replyTo;
+        emailData.replyTo = stripCrlf(this.config.replyTo);
       }
 
       if (options.headers) {
-        emailData.headers = options.headers;
+        const sanitizedHeaders: Record<string, string> = {};
+        for (const [key, value] of Object.entries(options.headers)) {
+          sanitizedHeaders[key] = String(value).replace(/[\r\n]/g, "");
+        }
+        emailData.headers = sanitizedHeaders;
       }
 
       if (options.tags) {
@@ -190,7 +208,23 @@ export class ResendProvider implements IEmailProvider {
         }));
       }
 
-      const { data, error } = await this.resend.emails.send(emailData);
+      // Forward scheduled delivery to Resend (`scheduled_at`). Previously this
+      // option was silently dropped and emails were sent immediately even when
+      // the caller asked for a future delivery time.
+      if (options.scheduledAt) {
+        emailData.scheduledAt = options.scheduledAt.toISOString();
+      }
+
+      // Forward priority (1=highest .. 5=lowest) via the standard X-Priority
+      // header, since Resend has no dedicated field for it.
+      if (options.priority) {
+        const headers = emailData.headers ?? {};
+        headers["X-Priority"] = String(options.priority);
+        emailData.headers = headers;
+      }
+
+      const resend = await this.getClient();
+      const { data, error } = await resend.emails.send(emailData);
 
       if (error) {
         return {

@@ -61,6 +61,73 @@ export const deepEqual: DeepEqual = (obj1, obj2) => {
     return false;
   }
 
+  // Compare by type tag to distinguish Date, RegExp, Map, Set, Array, etc.
+  const tag1 = Object.prototype.toString.call(obj1);
+  const tag2 = Object.prototype.toString.call(obj2);
+  if (tag1 !== tag2) {
+    return false;
+  }
+
+  // Handle Date — compare by time value
+  if (obj1 instanceof Date && obj2 instanceof Date) {
+    return obj1.getTime() === obj2.getTime();
+  }
+
+  // Handle RegExp — compare source and flags
+  if (obj1 instanceof RegExp && obj2 instanceof RegExp) {
+    return obj1.source === obj2.source && obj1.flags === obj2.flags;
+  }
+
+  // Handle arrays — compare length first, then elements in order
+  if (Array.isArray(obj1) && Array.isArray(obj2)) {
+    if (obj1.length !== obj2.length) {
+      return false;
+    }
+    for (let i = 0; i < obj1.length; i++) {
+      if (!deepEqual(obj1[i] as Record<string, unknown>, obj2[i] as Record<string, unknown>)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Handle Map — compare size, then every key/value pair (order-sensitive, like array)
+  if (obj1 instanceof Map && obj2 instanceof Map) {
+    if (obj1.size !== obj2.size) {
+      return false;
+    }
+    for (const [key, value] of obj1) {
+      if (!obj2.has(key)) {
+        return false;
+      }
+      if (!deepEqual(value as Record<string, unknown>, obj2.get(key) as Record<string, unknown>)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Handle Set — compare size, then every element (deepEqual to support object members)
+  if (obj1 instanceof Set && obj2 instanceof Set) {
+    if (obj1.size !== obj2.size) {
+      return false;
+    }
+    for (const value of obj1) {
+      // Sets don't have deep lookup, so check each candidate of obj2.
+      let found = false;
+      for (const other of obj2) {
+        if (deepEqual(value as Record<string, unknown>, other as Record<string, unknown>)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   const keys1 = Object.keys(obj1);
   const keys2 = Object.keys(obj2);
 

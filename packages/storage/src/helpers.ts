@@ -3,7 +3,90 @@
  * Provides utility functions for file operations, MIME type detection, and path manipulation
  */
 
-import { lookup } from "mime-types";
+// Compact, dependency-free MIME map covering the common types this package
+// deals with. Replaces `mime-types` (which drags in ~100KB of `mime-db` and a
+// CommonJS `require('path')`, breaking the cross-runtime `./helpers` entry).
+const MIME_BY_EXTENSION: Record<string, string> = {
+  // Images
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  avif: "image/avif",
+  bmp: "image/bmp",
+  svg: "image/svg+xml",
+  ico: "image/x-icon",
+  tiff: "image/tiff",
+  tif: "image/tiff",
+  heic: "image/heic",
+  heif: "image/heif",
+  // Video
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  avi: "video/x-msvideo",
+  mkv: "video/x-matroska",
+  m4v: "video/x-m4v",
+  wmv: "video/x-ms-wmv",
+  flv: "video/x-flv",
+  // Audio
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  flac: "audio/flac",
+  aac: "audio/aac",
+  m4a: "audio/x-m4a",
+  opus: "audio/opus",
+  // Documents
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  // Text / code
+  txt: "text/plain",
+  md: "text/markdown",
+  html: "text/html",
+  htm: "text/html",
+  css: "text/css",
+  csv: "text/csv",
+  ics: "text/calendar",
+  json: "application/json",
+  xml: "application/xml",
+  yaml: "application/x-yaml",
+  yml: "application/x-yaml",
+  js: "text/javascript",
+  mjs: "text/javascript",
+  ts: "text/typescript",
+  jsx: "text/jsx",
+  tsx: "text/tsx",
+  // Archives
+  zip: "application/zip",
+  gz: "application/gzip",
+  tar: "application/x-tar",
+  rar: "application/vnd.rar",
+  "7z": "application/x-7z-compressed",
+  bz2: "application/x-bzip2",
+  // Fonts
+  woff: "font/woff",
+  woff2: "font/woff2",
+  ttf: "font/ttf",
+  otf: "font/otf",
+  eot: "application/vnd.ms-fontobject",
+  // Other
+  bin: "application/octet-stream",
+  exe: "application/octet-stream",
+};
+
+const lookupMimeByExtension = (fileName: string): string | undefined => {
+  const dot = fileName.lastIndexOf(".");
+  if (dot < 0 || dot === fileName.length - 1) return undefined;
+  const ext = fileName.slice(dot + 1).toLowerCase();
+  return MIME_BY_EXTENSION[ext];
+};
 
 /**
  * Generate a unique file key with timestamp and random string
@@ -26,10 +109,11 @@ import { lookup } from "mime-types";
 export function generateFileKey(originalName: string, prefix?: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
-  const extension = originalName.split(".").pop();
-  const baseName = originalName.split(".").slice(0, -1).join(".");
+  const lastDot = originalName.lastIndexOf(".");
+  const baseName = lastDot > 0 ? originalName.slice(0, lastDot) : originalName;
+  const extension = lastDot > 0 ? originalName.slice(lastDot) : "";
 
-  const fileName = `${baseName}-${timestamp}-${random}${extension ? `.${extension}` : ""}`;
+  const fileName = `${baseName}-${timestamp}-${random}${extension}`;
 
   return prefix ? `${prefix}/${fileName}` : fileName;
 }
@@ -55,7 +139,7 @@ export function generateFileKey(originalName: string, prefix?: string): string {
  * ```
  */
 export function getMimeType(fileName: string): string {
-  const mimeType = lookup(fileName);
+  const mimeType = lookupMimeByExtension(fileName);
   return mimeType || "application/octet-stream";
 }
 
@@ -163,10 +247,11 @@ export function validateFileType(
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 Bytes";
+  if (bytes < 0) return `-${formatFileSize(-bytes)}`;
 
   const k = 1024;
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
 
   return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
@@ -189,11 +274,17 @@ export function formatFileSize(bytes: number): string {
  * ```
  */
 export function sanitizeFileName(fileName: string): string {
-  return fileName
-    .replace(/[^a-zA-Z0-9.-]/g, "_") // Replace special chars with underscore
-    .replace(/_{2,}/g, "_") // Replace multiple underscores with single
-    .replace(/^_|_$/g, "") // Remove leading/trailing underscores
-    .toLowerCase();
+  return (
+    fileName
+      .replace(/[^a-zA-Z0-9.-]/g, "_") // Replace special chars with underscore
+      .replace(/_{2,}/g, "_") // Replace multiple underscores with single
+      .replace(/^_|_$/g, "") // Remove leading/trailing underscores
+      // Collapse any underscore immediately preceding the file extension so we
+      // don't get "name_.pdf". Without this, `My Doc (2023).pdf` becomes
+      // `my_doc_2023_.pdf` instead of the documented `my_doc_2023.pdf`.
+      .replace(/_+(\.[a-zA-Z0-9]+)$/, "$1")
+      .toLowerCase()
+  );
 }
 
 /**
@@ -217,8 +308,9 @@ export function sanitizeFileName(fileName: string): string {
  * ```
  */
 export function getFileExtension(fileName: string): string {
-  const extension = fileName.split(".").pop();
-  return extension ? `.${extension.toLowerCase()}` : "";
+  const lastDot = fileName.lastIndexOf(".");
+  if (lastDot <= 0) return "";
+  return `.${fileName.slice(lastDot + 1).toLowerCase()}`;
 }
 
 /**
@@ -337,9 +429,13 @@ export function buildPublicUrl(
   const cleanKey = key.replace(/^\//, "");
 
   if (supabase) {
-    // Remove both `.storage` subdomain and S3 path
+    // Strip Supabase's storage subdomain / path prefix. The `.storage` host
+    // label must be removed only when it appears as a subdomain of a Supabase
+    // project host (e.g. `https://xyz.storage.supabase.co`), not when the
+    // substring occurs inside a bucket name or path. Anchor with the Supabase
+    // TLD to avoid corrupting URLs that merely contain ".storage".
     cleanBaseUrl = cleanBaseUrl
-      .replace(/\.storage/, "") // remove ".storage"
+      .replace(/\.storage(?=\.supabase\.(?:co|in|net))/, "")
       .replace(/\/storage\/v1\/s3$/, ""); // remove "/storage/v1/s3"
     cleanBaseUrl = `${cleanBaseUrl}/storage/v1/object/public`;
   }
@@ -1049,13 +1145,18 @@ export function bufferToBase64(
  */
 export async function generateFileHash(
   content: Uint8Array | string,
-  algorithm: "md5" | "sha1" | "sha256" = "md5",
+  algorithm: "md5" | "sha1" | "sha256" = "sha256",
 ): Promise<string> {
+  // md5/sha1 are intentionally not implemented via Web Crypto (no MD5 in
+  // subtle.digest, and SHA-1 is widely available but discouraged). When the
+  // caller asks for one of those, fall back to node:crypto. For the default
+  // (sha256) and sha1 we use Web Crypto when available so this helper works
+  // cross-runtime.
   if (algorithm !== "md5" && typeof crypto !== "undefined" && crypto.subtle) {
     const rawData = typeof content === "string" ? new TextEncoder().encode(content) : content;
     const hashBuffer = await crypto.subtle.digest(
       algorithm === "sha1" ? "SHA-1" : "SHA-256",
-      // biome-ignore lint/suspicious/noExplicitAny: <>
+      // biome-ignore lint/suspicious/noExplicitAny: BufferLike vs ArrayBufferView variance across runtimes
       rawData as any,
     );
     return Array.from(new Uint8Array(hashBuffer))
@@ -1065,7 +1166,7 @@ export async function generateFileHash(
 
   const nodeCrypto = await import("node:crypto");
   const hash = nodeCrypto.createHash(algorithm);
-  // biome-ignore lint/suspicious/noExplicitAny: <>
+  // biome-ignore lint/suspicious/noExplicitAny: BufferLike vs string union variance across runtimes
   hash.update(content as any);
   return hash.digest("hex");
 }
@@ -1268,7 +1369,9 @@ export function detectFileTypeFromContent(buffer: Uint8Array): string {
     return "video/mp4";
   }
 
-  // MP3
+  // MP3: MPEG audio frame sync is the high 11 bits = 0xFFE. This is `0xFF`
+  // for byte 0 and the top 3 bits of byte 1 (mask 0xE0), so the check below
+  // is the standard MP3 sync test.
   if (
     (header[0] === 0xff && (header[1] & 0xe0) === 0xe0) ||
     new TextDecoder().decode(header.subarray(0, 3)) === "ID3"

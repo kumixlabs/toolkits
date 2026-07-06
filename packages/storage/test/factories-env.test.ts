@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createS3 } from "../src/s3";
 import { createCloudinary } from "../src/cloudinary";
 import { ENV_VARS } from "../src/config";
+import { createS3 } from "../src/s3";
 
 describe("Factories via env", () => {
   beforeEach(() => {
     const keys = Object.values(ENV_VARS) as string[];
-    keys.forEach((k) => delete (process.env as any)[k]);
+    keys.forEach((k) => {
+      delete (process.env as Record<string, string | undefined>)[k];
+    });
   });
 
   it("createS3 loads config from env", () => {
@@ -50,7 +52,7 @@ describe("Factories via env", () => {
     expect(cloud.getProvider()).toBe("cloudinary");
     expect(cloud.getConfig().cloudName).toBe("cloud");
     expect(cloud.getPublicUrl("folder/photo.jpg")).toBe(
-      "https://res.cloudinary.com/cloud/image/upload/folder/photo.jpg",
+      "https://res.cloudinary.com/cloud/image/upload/uploads/folder/photo.jpg",
     );
   });
 
@@ -66,7 +68,7 @@ describe("Factories via env", () => {
     expect(cloud.getProvider()).toBe("cloudinary");
     expect(cloud.getConfig().cloudName).toBe("cloud");
     expect(cloud.getPublicUrl("folder/photo.jpg")).toBe(
-      "https://res.cloudinary.com/cloud/image/upload/folder/photo.jpg",
+      "https://res.cloudinary.com/cloud/image/upload/uploads/folder/photo.jpg",
     );
   });
 });

@@ -1,3 +1,4 @@
+import { CopyObjectCommand } from "@aws-sdk/client-s3";
 import { describe, expect, it, vi } from "vitest";
 
 import { FileOperations } from "../src/operations/file-operations";
@@ -53,7 +54,11 @@ describe("FileOperations error and edge branches", () => {
   it("download with Range option", async () => {
     const client: any = {
       send: vi.fn().mockResolvedValue({
-        Body: { transformToWebStream: () => ({ getReader: () => ({ read: async () => ({ done: true }) }) }) },
+        Body: {
+          transformToWebStream: () => ({
+            getReader: () => ({ read: async () => ({ done: true }) }),
+          }),
+        },
         ContentType: "text/plain",
       }),
     };
@@ -89,12 +94,17 @@ describe("FileOperations error and edge branches", () => {
     const client: any = {
       send: vi.fn().mockResolvedValue({
         Deleted: [{ Key: "a.txt" }],
-        Errors: [{ Key: "b.txt", Message: "denied" }, { Key: undefined, Message: undefined }],
+        Errors: [
+          { Key: "b.txt", Message: "denied" },
+          { Key: undefined, Message: undefined },
+        ],
       }),
     };
     const ops = new FileOperations(client, config);
     const res = await ops.batchDelete({ keys: ["a.txt", "b.txt"] });
-    expect(res.success).toBe(true);
+    // Partial failure: S3 returned Errors, so the operation is now reported as
+    // not-fully-successful (previously `success: true` masked the per-key errors).
+    expect(res.success).toBe(false);
     expect(res.errors!.length).toBe(2);
     expect(res.errors![1].error).toBe("Unknown error");
   });
@@ -147,6 +157,16 @@ describe("FileOperations error and edge branches", () => {
     const res = await ops.copy({ sourceKey: "a", destinationKey: "b" });
     expect(res.success).toBe(false);
     expect(res.error).toBe("copy boom");
+  });
+
+  it("copy percent-encodes CopySource for keys with special chars", async () => {
+    vi.mocked(CopyObjectCommand).mockClear();
+    const client: any = { send: vi.fn().mockResolvedValue({ CopyObjectResult: { ETag: '"e"' } }) };
+    const ops = new FileOperations(client, config);
+    await ops.copy({ sourceKey: "folder/a?b&c=d e.txt", destinationKey: "dest" });
+    const input = vi.mocked(CopyObjectCommand).mock.calls[0][0] as { CopySource: string };
+    // `?`, `&`, `=`, space must be percent-encoded; `/` must survive.
+    expect(input.CopySource).toBe("bucket/folder/a%3Fb%26c%3Dd%20e.txt");
   });
 
   it("move returns error when copy fails", async () => {

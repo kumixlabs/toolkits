@@ -6,21 +6,20 @@
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "default": "./dist/index.js"
     },
     "./components": {
       "types": "./dist/components.d.ts",
-      "import": "./dist/components.js"
+      "default": "./dist/components.js"
     },
     "./helpers": {
       "types": "./dist/helpers.d.ts",
-      "import": "./dist/helpers.js"
+      "default": "./dist/helpers.js"
     }
   },
   "scripts": {
@@ -69,6 +68,20 @@
     "react": ">=18.0.0 || >=19.0.0-rc.0",
     "react-email": ">=6.6.0",
     "resend": ">=6.15.0"
+  },
+  "peerDependenciesMeta": {
+    "nodemailer": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-email": {
+      "optional": true
+    },
+    "resend": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

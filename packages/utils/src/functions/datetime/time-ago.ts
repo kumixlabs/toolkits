@@ -85,7 +85,8 @@ export const timeAgo = (
   if (!timestamp) return neverText;
   const diff = Date.now() - new Date(timestamp).getTime();
   if (diff < 1000) {
-    // less than 1 second
+    // Less than 1 second in the past, OR a future timestamp within 1s (clock
+    // skew) — treat both as "just now" so callers don't render "-5s" strings.
     return justNowText;
   } else if (diff > 82800000) {
     // more than 23 hours – similar to how Twitter displays timestamps

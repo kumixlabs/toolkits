@@ -360,13 +360,15 @@ describe("Storage Configuration", () => {
     });
 
     it("hasStorageConfig should work with explicit env", () => {
-      expect(hasStorageConfig({
-        KUMIX_S3_PROVIDER: "aws",
-        KUMIX_S3_ACCESS_KEY_ID: "key",
-        KUMIX_S3_SECRET_ACCESS_KEY: "secret",
-        KUMIX_S3_REGION: "us-east-1",
-        KUMIX_S3_BUCKET: "bucket",
-      })).toBe(true);
+      expect(
+        hasStorageConfig({
+          KUMIX_S3_PROVIDER: "aws",
+          KUMIX_S3_ACCESS_KEY_ID: "key",
+          KUMIX_S3_SECRET_ACCESS_KEY: "secret",
+          KUMIX_S3_REGION: "us-east-1",
+          KUMIX_S3_BUCKET: "bucket",
+        }),
+      ).toBe(true);
       expect(hasStorageConfig({})).toBe(false);
     });
 

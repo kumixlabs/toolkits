@@ -57,19 +57,30 @@ const truncateDomain = (domain: string, maxLength: number): string => {
  * ```
  */
 export const smartTruncate = (link: string, maxLength: number): string => {
-  if (link.length <= maxLength) {
-    return link;
-  }
+  if (!link) return "";
+  if (maxLength <= 0) return "";
+  if (link.length <= maxLength) return link;
 
   const [domain, ...pathParts] = link.split("/");
   const path = pathParts.join("/");
   const minDomainLength = 8;
 
+  // If the requested length can't even fit the minimum domain reservation,
+  // bail out with a hard slice of the whole string. Going below zero would
+  // otherwise feed `truncate` a negative length and slice from the end.
+  if (maxLength < minDomainLength) {
+    return link.slice(0, maxLength);
+  }
+
   // calculate max path length
   const maxPathLength = maxLength - minDomainLength;
 
-  // Truncate path
-  const truncatedPath = truncate(path, maxPathLength)!;
+  // Truncate path. `truncate` returns null for falsy input, so handle the
+  // "no path" case explicitly to avoid emitting `${domain}/null`.
+  const truncatedPath = path ? truncate(path, maxPathLength) : null;
+  if (!truncatedPath) {
+    return truncateDomain(domain, maxLength);
+  }
 
   // Truncate domain if necessary, preserving TLD
   const truncatedDomain = truncateDomain(domain, maxLength - truncatedPath.length);

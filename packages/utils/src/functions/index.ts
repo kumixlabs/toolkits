@@ -1,4 +1,4 @@
-// biome-ignore-all assist/source/organizeImports: <>
+// biome-ignore-all assist/source/organizeImports: barreled exports grouped by category
 
 /************************************
  **** ANALYTICS - Analytics and tracking

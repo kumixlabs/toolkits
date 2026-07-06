@@ -70,13 +70,8 @@ export async function hashPassword(
   options: HashPasswordOptions = {},
 ): Promise<string | null> {
   // Validate input
-  if (!password || typeof password !== "string") {
+  if (!password || typeof password !== "string" || password.length < 1) {
     logger.warn("Password hashing: Password must be a non-empty string");
-    return null;
-  }
-
-  if (password.length < 1) {
-    logger.warn("Password hashing: Password cannot be empty");
     return null;
   }
 
@@ -89,6 +84,17 @@ export async function hashPassword(
   }
 
   try {
+    // bcrypt silently truncates inputs longer than 72 bytes, which makes
+    // distinct long passwords collide. Reject oversize inputs explicitly so
+    // callers learn about the limit instead of getting a false sense of
+    // uniqueness. (Pre-hashing e.g. SHA-256 would also work, but changes the
+    // hash format and is left as a caller concern.)
+    const passwordBytes = Buffer.byteLength(password, "utf8");
+    if (passwordBytes > 72) {
+      logger.warn("Password hashing: Password exceeds bcrypt's 72-byte limit");
+      return null;
+    }
+
     // Generate salt and hash password
     const salt = await bcrypt.genSalt(saltRounds);
     const hashedPassword = await bcrypt.hash(password, salt);

@@ -42,6 +42,8 @@ export interface S3Config {
   accessKeyId: string;
   /** Secret access key for authentication */
   secretAccessKey: string;
+  /** Optional session token for AWS STS / SSO / role-chain temporary credentials */
+  sessionToken?: string;
   /** Custom endpoint for S3-compatible services (MinIO, R2, etc.) */
   endpoint?: string;
   /** Force path style for services like MinIO */
@@ -97,10 +99,10 @@ export interface FolderInfo {
   name: string;
   /** Full folder path */
   path: string;
-  /** Total size of all files in folder */
-  size: number;
-  /** Number of files in folder */
-  fileCount: number;
-  /** Last modified date */
-  lastModified: Date;
+  /** Total size of all files in folder (requires aggregation; often omitted) */
+  size?: number;
+  /** Number of files in folder (requires aggregation; often omitted) */
+  fileCount?: number;
+  /** Last modified date (requires aggregation; often omitted) */
+  lastModified?: Date;
 }

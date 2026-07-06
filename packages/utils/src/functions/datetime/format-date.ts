@@ -51,8 +51,9 @@ export const formatDate = (
   options?: Intl.DateTimeFormatOptions,
   locale: string = "en-US",
 ): string => {
-  if (datetime.toString() === "Invalid Date") return "";
-  return new Date(datetime).toLocaleDateString(locale, {
+  const date = new Date(datetime);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(locale, {
     day: "numeric",
     month: "long",
     year: "numeric",

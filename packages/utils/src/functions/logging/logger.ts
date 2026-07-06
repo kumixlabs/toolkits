@@ -47,8 +47,13 @@ import { isDevelopment, LOG_LEVEL } from "../../constants/development";
  * });
  * ```
  */
+// Parse the configured log level safely. Non-numeric values would previously
+// fall through as `NaN`, leaving the logger at an indeterminate level.
+const parsedLevel = LOG_LEVEL !== undefined ? Number(LOG_LEVEL) : Number.NaN;
+const resolvedLevel = isDevelopment ? 5 : Number.isFinite(parsedLevel) ? parsedLevel : 3;
+
 export const logger = createConsola({
-  level: isDevelopment ? 5 : LOG_LEVEL ? Number(LOG_LEVEL) : 3,
+  level: resolvedLevel,
   formatOptions: {
     date: false,
   },

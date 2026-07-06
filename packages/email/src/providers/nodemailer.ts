@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: We need to use any to avoid type errors. */
 
+import { formatEmailAddress, stripCrlf } from "../helpers";
 import type {
   EmailResult,
   EmailValidationResult,
@@ -75,23 +76,45 @@ export class NodemailerProvider implements IEmailProvider {
     try {
       const transporter = await this.getTransporter();
       const info: any = await transporter.sendMail({
-        from: `${this.config.from.name} <${this.config.from.email}>`,
-        to: Array.isArray(options.to) ? options.to.join(", ") : options.to,
+        // Route `from` through formatEmailAddress so the display name is
+        // quoted/escaped and CR/LF is stripped (header-injection hardening).
+        from: formatEmailAddress(this.config.from.name, this.config.from.email),
+        to: (Array.isArray(options.to) ? options.to : [options.to]).map(stripCrlf).join(", "),
         cc: options.cc
-          ? Array.isArray(options.cc)
-            ? options.cc.join(", ")
-            : options.cc
+          ? (Array.isArray(options.cc) ? options.cc : [options.cc]).map(stripCrlf).join(", ")
           : undefined,
         bcc: options.bcc
-          ? Array.isArray(options.bcc)
-            ? options.bcc.join(", ")
-            : options.bcc
+          ? (Array.isArray(options.bcc) ? options.bcc : [options.bcc]).map(stripCrlf).join(", ")
           : undefined,
-        subject: options.subject,
+        subject: options.subject.replace(/[\r\n]/g, ""),
         html: options.html,
         text: options.text,
-        replyTo: this.config.replyTo,
-        headers: options.headers,
+        // Forward priority (1=highest .. 5=lowest) — nodemailer supports both
+        // `priority` (high/normal/low) and the X-Priority header.
+        priority:
+          options.priority === undefined
+            ? undefined
+            : options.priority <= 2
+              ? "high"
+              : options.priority >= 4
+                ? "low"
+                : "normal",
+        replyTo: this.config.replyTo ? stripCrlf(this.config.replyTo) : undefined,
+        headers: options.headers
+          ? {
+              ...Object.fromEntries(
+                Object.entries(options.headers).map(([k, v]) => [
+                  k,
+                  String(v).replace(/[\r\n]/g, ""),
+                ]),
+              ),
+              // Always also set the numeric X-Priority header for clients that
+              // ignore the symbolic priority field.
+              ...(options.priority ? { "X-Priority": String(options.priority) } : {}),
+            }
+          : options.priority
+            ? { "X-Priority": String(options.priority) }
+            : undefined,
         attachments: options.attachments?.map((a) => ({
           filename: a.filename,
           content: a.content as any,

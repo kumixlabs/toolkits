@@ -4,6 +4,7 @@
  */
 
 import {
+  type _Object,
   CopyObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
@@ -28,6 +29,60 @@ import type {
   RenameFolderResult,
   S3Config,
 } from "../types";
+
+/** S3 DeleteObjectsCommand allows at most 1000 keys per request */
+const S3_DELETE_MAX_KEYS = 1000;
+
+/**
+ * List ALL objects under a prefix, following pagination (handles >1000 keys)
+ */
+async function listAllObjects(
+  client: S3Client,
+  bucket: string,
+  prefix: string,
+): Promise<_Object[]> {
+  const objects: _Object[] = [];
+  let continuationToken: string | undefined;
+  do {
+    const command = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+    const result = await client.send(command);
+    if (result.Contents) {
+      objects.push(...result.Contents);
+    }
+    continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return objects;
+}
+
+/** Delete objects in batches of 1000 (S3 hard limit per DeleteObjectsCommand) */
+async function deleteObjectsBatched(
+  client: S3Client,
+  bucket: string,
+  keys: string[],
+): Promise<string[]> {
+  const deleted: string[] = [];
+  for (let i = 0; i < keys.length; i += S3_DELETE_MAX_KEYS) {
+    const batch = keys.slice(i, i + S3_DELETE_MAX_KEYS);
+    const command = new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: {
+        Objects: batch.map((key) => ({ Key: key })),
+        Quiet: true,
+      },
+    });
+    const result = await client.send(command);
+    if (result.Deleted) {
+      for (const obj of result.Deleted) {
+        if (obj.Key) deleted.push(obj.Key);
+      }
+    }
+  }
+  return deleted;
+}
 
 /**
  * S3 folder operations implementation
@@ -73,33 +128,19 @@ export class FolderOperations {
       const folderPath = options.path.endsWith("/") ? options.path : `${options.path}/`;
 
       if (options.recursive) {
-        // List all objects with the folder prefix
-        const listCommand = new ListObjectsV2Command({
-          Bucket: this.config.bucket,
-          Prefix: folderPath,
-        });
+        // List all objects with the folder prefix (handles >1000 keys)
+        const allObjects = await listAllObjects(this.client, this.config.bucket, folderPath);
 
-        const listResult = await this.client.send(listCommand);
-
-        if (!listResult.Contents || listResult.Contents.length === 0) {
+        if (allObjects.length === 0) {
           return {
             success: true,
             deletedFiles: [],
           };
         }
 
-        // Delete all objects in the folder
-        const deleteCommand = new DeleteObjectsCommand({
-          Bucket: this.config.bucket,
-          Delete: {
-            Objects: listResult.Contents.map((obj) => ({ Key: obj.Key! })),
-            Quiet: false,
-          },
-        });
-
-        const deleteResult = await this.client.send(deleteCommand);
-
-        const deletedFiles = deleteResult.Deleted?.map((obj) => obj.Key!).filter(Boolean) || [];
+        // Delete all objects in batches of 1000
+        const keys = allObjects.map((obj) => obj.Key!).filter(Boolean);
+        const deletedFiles = await deleteObjectsBatched(this.client, this.config.bucket, keys);
 
         return {
           success: true,
@@ -151,9 +192,6 @@ export class FolderOperations {
           return {
             name,
             path,
-            size: 0, // Will be calculated separately if needed
-            fileCount: 0, // Will be calculated separately if needed
-            lastModified: new Date(),
           };
         }) || [];
 
@@ -207,9 +245,6 @@ export class FolderOperations {
           folderInfo: {
             name,
             path: folderPath,
-            size: 0,
-            fileCount: 0,
-            lastModified: new Date(),
           },
         };
       }
@@ -229,15 +264,10 @@ export class FolderOperations {
       const oldPath = options.oldPath.endsWith("/") ? options.oldPath : `${options.oldPath}/`;
       const newPath = options.newPath.endsWith("/") ? options.newPath : `${options.newPath}/`;
 
-      // List all objects in the old folder
-      const listCommand = new ListObjectsV2Command({
-        Bucket: this.config.bucket,
-        Prefix: oldPath,
-      });
+      // List all objects in the old folder (handles >1000 keys)
+      const allObjects = await listAllObjects(this.client, this.config.bucket, oldPath);
 
-      const listResult = await this.client.send(listCommand);
-
-      if (!listResult.Contents || listResult.Contents.length === 0) {
+      if (allObjects.length === 0) {
         return {
           success: true,
           movedFiles: [],
@@ -246,32 +276,30 @@ export class FolderOperations {
 
       const movedFiles: string[] = [];
 
-      // Copy each file to new location and delete old one
-      for (const obj of listResult.Contents) {
+      // Copy each file to new location
+      for (const obj of allObjects) {
         const oldKey = obj.Key!;
-        const newKey = oldKey.replace(oldPath, newPath);
+        // Anchor the prefix substitution to the start of the key. `String.replace`
+        // replaces the first occurrence *anywhere*, which over-replaces when the
+        // path segment also appears mid-key.
+        const newKey = newPath + oldKey.slice(oldPath.length);
 
         // Copy object using CopyObjectCommand
         const copyCommand = new CopyObjectCommand({
           Bucket: this.config.bucket,
           Key: newKey,
-          CopySource: `${this.config.bucket}/${oldKey}`,
+          // CopySource must be percent-encoded; keys with special chars break the
+          // copy request otherwise.
+          CopySource: `${this.config.bucket}/${oldKey.split("/").map(encodeURIComponent).join("/")}`,
         });
 
         await this.client.send(copyCommand);
         movedFiles.push(newKey);
       }
 
-      // Delete old folder contents
-      const deleteCommand = new DeleteObjectsCommand({
-        Bucket: this.config.bucket,
-        Delete: {
-          Objects: listResult.Contents.map((obj) => ({ Key: obj.Key! })),
-          Quiet: true,
-        },
-      });
-
-      await this.client.send(deleteCommand);
+      // Delete old folder contents in batches
+      const oldKeys = allObjects.map((obj) => obj.Key!).filter(Boolean);
+      await deleteObjectsBatched(this.client, this.config.bucket, oldKeys);
 
       return {
         success: true,
@@ -294,15 +322,12 @@ export class FolderOperations {
         ? options.destinationPath
         : `${options.destinationPath}/`;
 
-      // List all objects in the source folder
-      const listCommand = new ListObjectsV2Command({
-        Bucket: this.config.bucket,
-        Prefix: sourcePath,
-      });
+      // List all objects in the source folder (handles >1000 keys).
+      // Non-recursive filtering is applied per-object below (the list call is
+      // identical either way — the previous ternary was dead code).
+      const allObjects = await listAllObjects(this.client, this.config.bucket, sourcePath);
 
-      const listResult = await this.client.send(listCommand);
-
-      if (!listResult.Contents || listResult.Contents.length === 0) {
+      if (allObjects.length === 0) {
         return {
           success: true,
           copiedFiles: [],
@@ -312,15 +337,22 @@ export class FolderOperations {
       const copiedFiles: string[] = [];
 
       // Copy each file to new location
-      for (const obj of listResult.Contents) {
+      for (const obj of allObjects) {
         const sourceKey = obj.Key!;
-        const destKey = sourceKey.replace(sourcePath, destPath);
+        // When not recursive, skip nested objects (files in subfolders)
+        if (!options.recursive) {
+          const relativeKey = sourceKey.slice(sourcePath.length);
+          if (relativeKey.includes("/")) continue;
+        }
+        // Anchor the prefix substitution to the start of the key.
+        const destKey = destPath + sourceKey.slice(sourcePath.length);
 
         // Copy object using CopyObjectCommand
         const copyCommand = new CopyObjectCommand({
           Bucket: this.config.bucket,
           Key: destKey,
-          CopySource: `${this.config.bucket}/${sourceKey}`,
+          // CopySource must be percent-encoded.
+          CopySource: `${this.config.bucket}/${sourceKey.split("/").map(encodeURIComponent).join("/")}`,
         });
 
         await this.client.send(copyCommand);

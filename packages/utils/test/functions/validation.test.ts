@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
+
 import {
-  validateEmail,
-  normalizeEmail,
-  isDisposableEmail,
-  isBusinessEmail,
-  getEmailDomain,
   deepEqual,
+  getEmailDomain,
+  isBusinessEmail,
+  isDisposableEmail,
   isIframeable,
+  normalizeEmail,
+  validateEmail,
 } from "../../src/index";
 
 describe("Validation", () => {
@@ -52,7 +53,10 @@ describe("Validation", () => {
           name === "content-security-policy" ? "frame-ancestors https://myapp.com" : null,
       },
     } as any);
-    const allowed = await isIframeable({ url: "https://x.com", requestDomain: "https://myapp.com" });
+    const allowed = await isIframeable({
+      url: "https://x.com",
+      requestDomain: "https://myapp.com",
+    });
     expect(allowed).toBe(true);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
@@ -70,7 +74,10 @@ describe("Validation", () => {
         get: (name: string) => (name === "content-security-policy" ? "frame-ancestors *" : null),
       },
     } as any);
-    const wildcard = await isIframeable({ url: "https://x.com", requestDomain: "https://other.com" });
+    const wildcard = await isIframeable({
+      url: "https://x.com",
+      requestDomain: "https://other.com",
+    });
     expect(wildcard).toBe(true);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
@@ -79,7 +86,10 @@ describe("Validation", () => {
         get: (name: string) => (name === "X-Frame-Options" ? "SAMEORIGIN" : null),
       },
     } as any);
-    const sameorigin = await isIframeable({ url: "https://x.com", requestDomain: "https://myapp.com" });
+    const sameorigin = await isIframeable({
+      url: "https://x.com",
+      requestDomain: "https://myapp.com",
+    });
     expect(sameorigin).toBe(false);
   });
 });

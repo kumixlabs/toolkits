@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, type vi } from "vitest";
 
 import { S3Service } from "../src/services/s3";
 import type { S3Config } from "../src/types";

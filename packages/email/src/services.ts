@@ -7,9 +7,8 @@ import type {
   EmailConfig,
   EmailResult,
   EmailTemplateData,
+  EmailValidationResult,
   IEmailProvider,
-  NodemailerConfig,
-  ResendConfig,
   SendEmailOptions,
 } from "./types";
 
@@ -23,13 +22,18 @@ export class EmailService {
   }
 
   private createProvider(config: EmailConfig): IEmailProvider {
+    // The `switch` narrows `config` to the concrete variant; no cast needed.
     switch (config.provider) {
       case "resend":
-        return new ResendProvider(config as ResendConfig);
+        return new ResendProvider(config);
       case "nodemailer":
-        return new NodemailerProvider(config as NodemailerConfig);
-      default:
-        throw new Error(`Unsupported email provider: ${(config as EmailConfig).provider}`);
+        return new NodemailerProvider(config);
+      default: {
+        // Exhaustiveness check — if a new provider is added to the union
+        // without a case here, this assignment fails to type-check.
+        const _exhaustive: never = config;
+        throw new Error(`Unsupported email provider: ${(_exhaustive as EmailConfig).provider}`);
+      }
     }
   }
 
@@ -55,8 +59,13 @@ export class EmailService {
     }
   }
 
+  /**
+   * Returns a deep copy of the current configuration. A shallow clone would
+   * share the nested `from` / `smtp` / `auth` objects (which contain SMTP
+   * credentials), letting callers accidentally mutate the service's config.
+   */
   getConfig(): EmailConfig {
-    return { ...this.config };
+    return structuredClone(this.config);
   }
 
   updateConfig(config: EmailConfig): void {
@@ -64,7 +73,7 @@ export class EmailService {
     this.provider = this.createProvider(config);
   }
 
-  async validateConfig() {
+  async validateConfig(): Promise<EmailValidationResult> {
     if (this.provider.validateConfig) {
       return this.provider.validateConfig();
     }

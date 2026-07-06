@@ -55,12 +55,14 @@ describe("Storage Helpers - Advanced", () => {
 
   it("sanitizeFileName removes special chars and lowercases", () => {
     const sanitized = sanitizeFileName("My File (2025)#.PDF");
-    expect(sanitized).toBe("my_file_2025_.pdf");
+    // Underscore adjacent to the extension is collapsed to match the documented
+    // output (`my_file_2025.pdf`, not `my_file_2025_.pdf`).
+    expect(sanitized).toBe("my_file_2025.pdf");
   });
 
   it("getFileExtension returns lowercased extension with dot", () => {
     expect(getFileExtension("photo.JPEG")).toBe(".jpeg");
-    expect(getFileExtension("noext")).toBe(".noext");
+    expect(getFileExtension("noext")).toBe("");
   });
 
   it("generateCacheControl builds correct header", () => {
@@ -200,6 +202,6 @@ describe("Storage Helpers - Advanced", () => {
   });
 
   it("getMimeType returns defaults for unknown", () => {
-    expect(getMimeType("unknown.xyz")).toBe("chemical/x-xyz");
+    expect(getMimeType("unknown.xyz")).toBe("application/octet-stream");
   });
 });

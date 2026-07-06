@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, type vi } from "vitest";
 
 import { S3Service } from "../src/services/s3";
 import type { S3Config } from "../src/types";
@@ -95,7 +95,9 @@ describe("S3Service full coverage", () => {
       .mockResolvedValueOnce({ Deleted: [{ Key: "old/a.txt" }] });
     const rf = await s3.renameFolder({ oldPath: "old", newPath: "new" });
     expect(rf.success).toBe(true);
-    folderSend.mockResolvedValueOnce({ Contents: [{ Key: "src/a.txt" }] }).mockResolvedValueOnce({});
+    folderSend
+      .mockResolvedValueOnce({ Contents: [{ Key: "src/a.txt" }] })
+      .mockResolvedValueOnce({});
     const cpf = await s3.copyFolder({ sourcePath: "src", destinationPath: "dest" });
     expect(cpf.success).toBe(true);
   });
@@ -155,7 +157,9 @@ describe("S3Service full coverage", () => {
       .mockResolvedValueOnce({ Deleted: [{ Key: "old/a.txt" }] });
     const rf = await s3.renameFolderPath("old", "new");
     expect(rf.success).toBe(true);
-    folderSend.mockResolvedValueOnce({ Contents: [{ Key: "src/a.txt" }] }).mockResolvedValueOnce({});
+    folderSend
+      .mockResolvedValueOnce({ Contents: [{ Key: "src/a.txt" }] })
+      .mockResolvedValueOnce({});
     const cpf = await s3.copyFolderPath("src", "dest");
     expect(cpf.success).toBe(true);
   });

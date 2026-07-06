@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, type vi } from "vitest";
 
 import { S3Provider } from "../src/providers/s3";
 import type { S3Config } from "../src/types";
@@ -21,7 +21,7 @@ describe("S3Provider basic", () => {
 
   it("upload/download/delete/list/exists basic flows", async () => {
     const provider = new S3Provider(config);
-    const send = (provider as any).fileOps["client"].send as ReturnType<typeof vi.fn>;
+    const send = (provider as any).fileOps.client.send as ReturnType<typeof vi.fn>;
     send.mockResolvedValue({});
     const up = await provider.upload({ key: "a.txt", file: Buffer.from("x") });
     expect(up.success).toBe(true);

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { v2 as cloudinary } from "cloudinary";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CloudinaryProvider } from "../src/providers/cloudinary";
 import type { CloudinaryConfig } from "../src/types";
@@ -70,22 +70,35 @@ describe("CloudinaryProvider delete/list/folder branches", () => {
     expect(res.error).toBe("destroy boom");
   });
 
-  it("list aggregates resources across types", async () => {
+  it("list paginates one resource type per call with encoded token", async () => {
+    // New behavior: only ONE resource type is queried per page call, and the
+    // owning type is encoded into the continuation token so the next call
+    // resumes the correct type (the old parallel-3-types approach fed a video
+    // cursor to the images call, producing wrong results).
     (cloudinary.api.resources as any)
       .mockResolvedValueOnce({
         resources: [
-          { public_id: "img1", bytes: 10, created_at: "2024-01-01", etag: "e1", format: "png", resource_type: "image" },
+          {
+            public_id: "img1",
+            bytes: 10,
+            created_at: "2024-01-01",
+            etag: "e1",
+            format: "png",
+            resource_type: "image",
+          },
         ],
         next_cursor: "cursor-img",
       })
       .mockResolvedValueOnce({ resources: [{ public_id: "vid1" }], next_cursor: undefined })
       .mockResolvedValueOnce({ resources: [], next_cursor: undefined });
     const provider = new CloudinaryProvider(config);
+    // continuationToken "c" has no `type:` prefix → defaults to image, fresh.
     const res = await provider.list({ prefix: "folder/", maxKeys: 10, continuationToken: "c" });
     expect(res.success).toBe(true);
-    expect(res.files!.length).toBe(2);
+    expect(res.files!.length).toBe(1);
     expect(res.isTruncated).toBe(true);
-    expect(res.nextContinuationToken).toBe("cursor-img");
+    // Token now encodes the owning resource type.
+    expect(res.nextContinuationToken).toBe("image:cursor-img");
   });
 
   it("list uses defaults and handles empty resources", async () => {
@@ -109,7 +122,9 @@ describe("CloudinaryProvider delete/list/folder branches", () => {
     const provider = new CloudinaryProvider(config);
     const res = await provider.deleteFolder({ path: "folder/", recursive: true });
     expect(res.success).toBe(true);
-    expect(cloudinary.api.delete_resources_by_prefix).toHaveBeenCalledWith("folder");
+    // The trailing slash is preserved for the prefix delete so we only match
+    // `folder/*` and never a sibling like `folderXYZ/*`.
+    expect(cloudinary.api.delete_resources_by_prefix).toHaveBeenCalledWith("folder/");
   });
 
   it("deleteFolder non-recursive just deletes folder", async () => {
@@ -129,7 +144,10 @@ describe("CloudinaryProvider delete/list/folder branches", () => {
 
   it("listFolders returns mapped folders", async () => {
     (cloudinary.api.root_folders as any).mockResolvedValueOnce({
-      folders: [{ name: "a", path: "a" }, { name: "b", path: "b" }],
+      folders: [
+        { name: "a", path: "a" },
+        { name: "b", path: "b" },
+      ],
     });
     const provider = new CloudinaryProvider(config);
     const res = await provider.listFolders();

@@ -1,6 +1,6 @@
 {
   "name": "@kumix/storage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Storage utilities for SaaS applications.",
   "author": "Kumix Labs <hai@kumix.io>",
   "license": "MIT",

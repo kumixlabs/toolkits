@@ -27,7 +27,7 @@
     },
     "packages/email": {
       "name": "@kumix/email",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "devDependencies": {
         "@kumix/tsconfig": "^0.1.0",
         "@types/node": "^26.1.0",
@@ -71,7 +71,7 @@
     },
     "packages/storage": {
       "name": "@kumix/storage",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "devDependencies": {
         "@aws-sdk/client-s3": "^3.1080.0",
         "@aws-sdk/s3-request-presigner": "^3.1080.0",
@@ -94,7 +94,7 @@
     },
     "packages/utils": {
       "name": "@kumix/utils",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "@paralleldrive/cuid2": "^3.3.0",
         "@sindresorhus/slugify": "^3.0.0",

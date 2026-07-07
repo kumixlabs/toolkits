@@ -1,5 +1,11 @@
 # @kumix/email
 
+## 0.1.2
+
+### Patch Changes
+
+- [`70db108`](https://github.com/kumixlabs/toolkits/commit/70db108655ec33124b44573370f25328b6cd615b) Thanks [@kumixio](https://github.com/kumixio)! - Fix the Nodemailer provider dropping `tags` and priority: tags are now forwarded as `X-Tag-*` headers and the numeric `X-Priority` header is always set, matching the Resend provider's behaviour. Also clarified the misleading comment in the Resend `validateConfig` (it performs a format check only and never contacts the API).
+
 ## 0.1.1
 
 ### Patch Changes

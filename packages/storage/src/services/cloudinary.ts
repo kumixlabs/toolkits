@@ -139,10 +139,9 @@ export class CloudinaryService implements StorageInterface {
   async uploadFile(
     key: string,
     file: Buffer | Uint8Array | string,
-    contentType?: string,
-    metadata?: Record<string, string>,
+    options?: Partial<UploadOptions>,
   ): Promise<UploadResult> {
-    return this.upload({ key, file, contentType, metadata });
+    return this.upload({ key, file, ...options });
   }
 
   async downloadFile(key: string): Promise<DownloadResult> {
@@ -169,33 +168,33 @@ export class CloudinaryService implements StorageInterface {
   async copyFile(
     sourceKey: string,
     destinationKey: string,
-    metadata?: Record<string, string>,
+    options?: Partial<CopyOptions>,
   ): Promise<CopyResult> {
-    return this.copy({ sourceKey, destinationKey, metadata });
+    return this.copy({ sourceKey, destinationKey, ...options });
   }
 
   async moveFile(
     sourceKey: string,
     destinationKey: string,
-    metadata?: Record<string, string>,
+    options?: Partial<MoveOptions>,
   ): Promise<MoveResult> {
-    return this.move({ sourceKey, destinationKey, metadata });
+    return this.move({ sourceKey, destinationKey, ...options });
   }
 
   async duplicateFile(
     sourceKey: string,
     destinationKey: string,
-    metadata?: Record<string, string>,
+    options?: Partial<DuplicateOptions>,
   ): Promise<DuplicateResult> {
-    return this.duplicate({ sourceKey, destinationKey, metadata });
+    return this.duplicate({ sourceKey, destinationKey, ...options });
   }
 
   async renameFile(
     sourceKey: string,
     destinationKey: string,
-    metadata?: Record<string, string>,
+    options?: Partial<MoveOptions>,
   ): Promise<MoveResult> {
-    return this.moveFile(sourceKey, destinationKey, metadata);
+    return this.moveFile(sourceKey, destinationKey, options);
   }
 
   async getDownloadUrl(key: string, expiresIn?: number): Promise<PresignedUrlResult> {

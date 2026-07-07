@@ -309,7 +309,9 @@ export function sanitizeFileName(fileName: string): string {
  */
 export function getFileExtension(fileName: string): string {
   const lastDot = fileName.lastIndexOf(".");
-  if (lastDot <= 0) return "";
+  // `lastDot <= 0` skips dotfiles/no-extension; also treat a trailing dot
+  // ("file.") as having no extension instead of returning a bare ".".
+  if (lastDot <= 0 || lastDot === fileName.length - 1) return "";
   return `.${fileName.slice(lastDot + 1).toLowerCase()}`;
 }
 
@@ -577,7 +579,10 @@ export function generateUniqueKey(
 ): string {
   const sanitized = sanitizeFileName(fileName);
   const extension = getFileExtension(sanitized);
-  const baseName = sanitized.replace(extension, "");
+  // Strip only the TRAILING extension. `String.replace(extension, "")` is
+  // unanchored and would remove the first occurrence of the extension substring
+  // anywhere in the name (e.g. ".pdf" inside "my.pdf.notes.pdf").
+  const baseName = extension ? sanitized.slice(0, sanitized.length - extension.length) : sanitized;
 
   let uniquePart = "";
   if (includeTimestamp) {

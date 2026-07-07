@@ -3,17 +3,7 @@
  * Provides comprehensive file management operations for S3-compatible storage providers
  */
 
-import {
-  CopyObjectCommand,
-  DeleteObjectCommand,
-  DeleteObjectsCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  type S3Client,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { buildPublicUrl, getMimeType } from "../helpers";
 import type {
@@ -39,6 +29,7 @@ import type {
   UploadOptions,
   UploadResult,
 } from "../types";
+import { loadPresigner, loadS3Sdk } from "./s3-sdk";
 
 /**
  * S3 file operations implementation
@@ -53,6 +44,7 @@ export class FileOperations {
 
   async upload(options: UploadOptions): Promise<UploadResult> {
     try {
+      const { PutObjectCommand } = await loadS3Sdk();
       const contentType = options.contentType || getMimeType(options.key);
 
       const command = new PutObjectCommand({
@@ -97,6 +89,7 @@ export class FileOperations {
 
   async download(options: DownloadOptions): Promise<DownloadResult> {
     try {
+      const { GetObjectCommand } = await loadS3Sdk();
       const command = new GetObjectCommand({
         Bucket: this.config.bucket,
         Key: options.key,
@@ -144,6 +137,7 @@ export class FileOperations {
 
   async delete(options: DeleteOptions): Promise<DeleteResult> {
     try {
+      const { DeleteObjectCommand } = await loadS3Sdk();
       const command = new DeleteObjectCommand({
         Bucket: this.config.bucket,
         Key: options.key,
@@ -164,6 +158,7 @@ export class FileOperations {
 
   async batchDelete(options: BatchDeleteOptions): Promise<BatchDeleteResult> {
     try {
+      const { DeleteObjectsCommand } = await loadS3Sdk();
       const command = new DeleteObjectsCommand({
         Bucket: this.config.bucket,
         Delete: {
@@ -203,6 +198,7 @@ export class FileOperations {
 
   async list(options: ListOptions = {}): Promise<ListResult> {
     try {
+      const { ListObjectsV2Command } = await loadS3Sdk();
       const command = new ListObjectsV2Command({
         Bucket: this.config.bucket,
         Prefix: options.prefix,
@@ -239,6 +235,7 @@ export class FileOperations {
 
   async exists(key: string): Promise<ExistsResult> {
     try {
+      const { HeadObjectCommand } = await loadS3Sdk();
       const command = new HeadObjectCommand({
         Bucket: this.config.bucket,
         Key: key,
@@ -271,6 +268,7 @@ export class FileOperations {
 
   async copy(options: CopyOptions): Promise<CopyResult> {
     try {
+      const { CopyObjectCommand } = await loadS3Sdk();
       const command = new CopyObjectCommand({
         Bucket: this.config.bucket,
         // CopySource must be percent-encoded; keys containing `?`, `&`, `=`,
@@ -343,6 +341,8 @@ export class FileOperations {
 
   async getPresignedUrl(options: PresignedUrlOptions): Promise<PresignedUrlResult> {
     try {
+      const { GetObjectCommand, PutObjectCommand } = await loadS3Sdk();
+      const { getSignedUrl } = await loadPresigner();
       const expiresIn = options.expiresIn || 3600; // 1 hour default
 
       let command: GetObjectCommand | PutObjectCommand;
@@ -403,7 +403,11 @@ export class FileOperations {
       );
     }
 
-    // Default AWS / DigitalOcean Spaces URL format
-    return `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/${key}`;
+    // Default AWS / DigitalOcean Spaces URL format. Encode each key segment so
+    // keys containing spaces/special chars yield valid URLs (matching the
+    // percent-encoding used by `copy`/`renameFolder`), while `/` separators are
+    // preserved.
+    const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+    return `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/${encodedKey}`;
   }
 }

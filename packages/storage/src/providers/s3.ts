@@ -3,10 +3,11 @@
  * Provides cloud storage operations using AWS S3 SDK for S3-compatible services
  */
 
-import { S3Client } from "@aws-sdk/client-s3";
+import type { S3Client } from "@aws-sdk/client-s3";
 
 import { FileOperations } from "../operations/file-operations";
 import { FolderOperations } from "../operations/folder-operations";
+import { loadS3Sdk } from "../operations/s3-sdk";
 import type {
   BatchDeleteOptions,
   BatchDeleteResult,
@@ -48,98 +49,130 @@ import type {
  * @internal
  */
 export class S3Provider implements StorageInterface {
-  private client: S3Client;
   private config: S3Config;
-  private fileOps: FileOperations;
-  private folderOps: FolderOperations;
+  private _client: S3Client | null = null;
+  private _fileOps: FileOperations | null = null;
+  private _folderOps: FolderOperations | null = null;
 
   constructor(config: S3Config) {
     this.config = config;
+  }
 
-    this.client = new S3Client({
-      region: config.region,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-        // Surface STS / temporary credentials when provided. Previously the
-        // session token was dropped, breaking AWS STS / SSO / role-chain auth.
-        ...(config.sessionToken ? { sessionToken: config.sessionToken } : {}),
-      },
-      endpoint: config.endpoint,
-      forcePathStyle: config.forcePathStyle ?? false,
-    });
+  /**
+   * Lazily construct the S3 client and operation helpers. The `@aws-sdk/client-s3`
+   * dependency is imported dynamically so the optional peer isn't required at
+   * module load — consumers using only Cloudinary can import the package without
+   * installing it.
+   */
+  private async getFileOps(): Promise<FileOperations> {
+    if (!this._fileOps) {
+      const client = await this.getClient();
+      this._fileOps = new FileOperations(client, this.config);
+    }
+    return this._fileOps;
+  }
 
-    this.fileOps = new FileOperations(this.client, this.config);
-    this.folderOps = new FolderOperations(this.client, this.config);
+  private async getFolderOps(): Promise<FolderOperations> {
+    if (!this._folderOps) {
+      const client = await this.getClient();
+      this._folderOps = new FolderOperations(client, this.config);
+    }
+    return this._folderOps;
+  }
+
+  private async getClient(): Promise<S3Client> {
+    if (!this._client) {
+      const { S3Client } = await loadS3Sdk();
+      this._client = new S3Client({
+        region: this.config.region,
+        credentials: {
+          accessKeyId: this.config.accessKeyId,
+          secretAccessKey: this.config.secretAccessKey,
+          // Surface STS / temporary credentials when provided. Previously the
+          // session token was dropped, breaking AWS STS / SSO / role-chain auth.
+          ...(this.config.sessionToken ? { sessionToken: this.config.sessionToken } : {}),
+        },
+        endpoint: this.config.endpoint,
+        forcePathStyle: this.config.forcePathStyle ?? false,
+      });
+    }
+    return this._client;
   }
 
   // File operations
   async upload(options: UploadOptions): Promise<UploadResult> {
-    return this.fileOps.upload(options);
+    return (await this.getFileOps()).upload(options);
   }
 
   async download(options: DownloadOptions): Promise<DownloadResult> {
-    return this.fileOps.download(options);
+    return (await this.getFileOps()).download(options);
   }
 
   async delete(options: DeleteOptions): Promise<DeleteResult> {
-    return this.fileOps.delete(options);
+    return (await this.getFileOps()).delete(options);
   }
 
   async batchDelete(options: BatchDeleteOptions): Promise<BatchDeleteResult> {
-    return this.fileOps.batchDelete(options);
+    return (await this.getFileOps()).batchDelete(options);
   }
 
   async list(options?: ListOptions): Promise<ListResult> {
-    return this.fileOps.list(options);
+    return (await this.getFileOps()).list(options);
   }
 
   async exists(key: string): Promise<ExistsResult> {
-    return this.fileOps.exists(key);
+    return (await this.getFileOps()).exists(key);
   }
 
   async copy(options: CopyOptions): Promise<CopyResult> {
-    return this.fileOps.copy(options);
+    return (await this.getFileOps()).copy(options);
   }
 
   async move(options: MoveOptions): Promise<MoveResult> {
-    return this.fileOps.move(options);
+    return (await this.getFileOps()).move(options);
   }
 
   async duplicate(options: DuplicateOptions): Promise<DuplicateResult> {
-    return this.fileOps.duplicate(options);
+    return (await this.getFileOps()).duplicate(options);
   }
 
   async getPresignedUrl(options: PresignedUrlOptions): Promise<PresignedUrlResult> {
-    return this.fileOps.getPresignedUrl(options);
+    return (await this.getFileOps()).getPresignedUrl(options);
   }
 
   getPublicUrl(key: string): string {
-    return this.fileOps.getPublicUrl(key);
+    // `getPublicUrl` is synchronous and does not touch the S3 client, so it must
+    // not force-load the SDK. Reuse an already-initialized `_fileOps` when
+    // present; otherwise build a throwaway (NOT cached, so it can't poison the
+    // lazy client init that a later async operation performs).
+    if (this._fileOps) {
+      return this._fileOps.getPublicUrl(key);
+    }
+    return new FileOperations(null as unknown as S3Client, this.config).getPublicUrl(key);
   }
 
   // Folder operations
   async createFolder(options: CreateFolderOptions): Promise<CreateFolderResult> {
-    return this.folderOps.createFolder(options);
+    return (await this.getFolderOps()).createFolder(options);
   }
 
   async deleteFolder(options: DeleteFolderOptions): Promise<DeleteFolderResult> {
-    return this.folderOps.deleteFolder(options);
+    return (await this.getFolderOps()).deleteFolder(options);
   }
 
   async listFolders(options?: ListFoldersOptions): Promise<ListFoldersResult> {
-    return this.folderOps.listFolders(options);
+    return (await this.getFolderOps()).listFolders(options);
   }
 
   async folderExists(path: string): Promise<FolderExistsResult> {
-    return this.folderOps.folderExists(path);
+    return (await this.getFolderOps()).folderExists(path);
   }
 
   async renameFolder(options: RenameFolderOptions): Promise<RenameFolderResult> {
-    return this.folderOps.renameFolder(options);
+    return (await this.getFolderOps()).renameFolder(options);
   }
 
   async copyFolder(options: CopyFolderOptions): Promise<CopyFolderResult> {
-    return this.folderOps.copyFolder(options);
+    return (await this.getFolderOps()).copyFolder(options);
   }
 }

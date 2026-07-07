@@ -15,7 +15,9 @@ describe("CloudinaryService", () => {
 
   it("uploadFile and getPublicUrl", async () => {
     const cloud = new CloudinaryService(config);
-    const res = await cloud.uploadFile("folder/photo.jpg", Buffer.from("x"), "image/jpeg");
+    const res = await cloud.uploadFile("folder/photo.jpg", Buffer.from("x"), {
+      contentType: "image/jpeg",
+    });
     expect(res.success).toBe(true);
     const url = cloud.getPublicUrl("folder/photo.jpg");
     // Relative key gets config.folder prepended (consistent with uploadFile).

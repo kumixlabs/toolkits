@@ -48,7 +48,7 @@ export function formatFileSize(bytes: number, decimals: number = 2, base: number
 
   const k = base;
   const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+  const i = Math.min(Math.max(Math.floor(Math.log(bytes) / Math.log(k)), 0), sizes.length - 1);
 
   return `${parseFloat((bytes / k ** i).toFixed(decimals))} ${sizes[i]}`;
 }

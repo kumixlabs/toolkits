@@ -48,8 +48,7 @@ const DEFAULT_ASSET_HOST =
  * ```
  */
 export function assetsUrl(path: string, host: string = DEFAULT_ASSET_HOST): string {
-  const env = getEnv("NEXT_PUBLIC_ASSETS_URL") || getEnv("VITE_ASSETS_URL");
-  const BASE_HOST = env ?? host;
+  const BASE_HOST = host;
 
   if (!path || typeof path !== "string") {
     return BASE_HOST;

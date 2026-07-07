@@ -65,5 +65,11 @@ export const nanoid = (chars?: number): string => {
  * ```
  */
 export function uid(): string {
-  return (Date.now() + Math.floor(Math.random() * 1000)).toString();
+  // Concatenate (not add) the timestamp with a zero-padded random suffix so IDs
+  // generated within the same millisecond don't collide. Adding the random
+  // value to the timestamp (the previous behavior) produced heavy collisions.
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+  return `${Date.now()}${random}`;
 }

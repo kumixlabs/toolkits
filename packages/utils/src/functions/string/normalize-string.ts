@@ -68,7 +68,12 @@ export const normalizeString = (key: string): string => {
 
   // Logging is gated behind an explicit env var (KUMIX_DEBUG_NORMALIZE) to avoid
   // accidentally dumping user input / secrets through the logger in dev.
-  if (isDevelopment && process.env.KUMIX_DEBUG_NORMALIZE && original !== normalized) {
+  if (
+    isDevelopment &&
+    typeof process !== "undefined" &&
+    process.env?.KUMIX_DEBUG_NORMALIZE &&
+    original !== normalized
+  ) {
     logger.log(
       `normalizeString: input changed (length ${original.length} -> ${normalized.length})`,
     );

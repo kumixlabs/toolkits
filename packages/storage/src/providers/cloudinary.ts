@@ -3,8 +3,6 @@
  * Provides cloud storage operations using Cloudinary's API for media management
  */
 
-import { v2 as cloudinary } from "cloudinary";
-
 import type {
   BatchDeleteOptions,
   BatchDeleteResult,
@@ -45,37 +43,54 @@ import type {
  * Implements StorageInterface for Cloudinary cloud storage
  * @internal
  */
+// biome-ignore lint/suspicious/noExplicitAny: Cloudinary SDK is dynamically imported and untyped here.
+type CloudinaryClient = any;
+
 export class CloudinaryProvider implements StorageInterface {
   private config: CloudinaryConfig;
+  private _client: CloudinaryClient | null = null;
 
   constructor(config: CloudinaryConfig) {
     this.config = config;
-    // Apply this instance's config to the module-global Cloudinary v2 client.
-    // NOTE: the Cloudinary SDK keeps a single global config, so creating
-    // multiple `CloudinaryProvider` instances with different credentials in the
-    // same process is not supported — the most recently-constructed instance
-    // wins. `configure()` is called before each API call below to narrow the
-    // race window when instances are interleaved.
-    this.configure();
   }
 
   /**
-   * Re-apply this instance's config to the global Cloudinary client. Call this
-   * before any API operation to reduce (but not eliminate) the chance that a
-   * different `CloudinaryProvider` instance has flipped the global config.
+   * Lazily load the Cloudinary SDK and re-apply this instance's config to the
+   * module-global v2 client. The SDK is dynamically imported so the optional
+   * `cloudinary` peer dep isn't required at module load time — consumers who
+   * only use the S3 provider can import the package without installing it.
+   *
+   * NOTE: the Cloudinary SDK keeps a single global config, so creating multiple
+   * `CloudinaryProvider` instances with different credentials in the same
+   * process is not supported — the most recently-configured instance wins.
+   * `getClient()` re-applies config before each API call to narrow the race
+   * window when instances are interleaved.
    */
-  private configure(): void {
-    cloudinary.config({
+  private async getClient(): Promise<CloudinaryClient> {
+    if (!this._client) {
+      try {
+        const mod = await import("cloudinary");
+        this._client = mod.v2 ?? (mod as { default?: { v2?: CloudinaryClient } }).default?.v2;
+      } catch {
+        throw new Error(
+          "cloudinary is not available in this runtime. " +
+            "Install the `cloudinary` package to use the Cloudinary storage provider.",
+        );
+      }
+    }
+    this._client.config({
       cloud_name: this.config.cloudName,
       api_key: this.config.apiKey,
       api_secret: this.config.apiSecret,
       secure: this.config.secure !== false,
     });
+    return this._client;
   }
 
   // File operations
   async upload(options: UploadOptions): Promise<UploadResult> {
     try {
+      const cloudinary = await this.getClient();
       // Convert Buffer/Uint8Array to base64 for Cloudinary
       let fileData: string;
       if (typeof options.file === "string") {
@@ -101,9 +116,14 @@ export class CloudinaryProvider implements StorageInterface {
         folder = keyParts.slice(0, -1).join("/");
       }
 
-      const dotIndex = publicId.lastIndexOf(".");
-      if (dotIndex > 0) {
-        publicId = publicId.slice(0, dotIndex);
+      // Only strip the extension for image/video assets. Cloudinary keeps the
+      // extension as part of the public_id for `raw` resources, so stripping it
+      // would break the stored-id / `getPublicUrl` round-trip for raw files.
+      if (resourceType !== "raw") {
+        const dotIndex = publicId.lastIndexOf(".");
+        if (dotIndex > 0) {
+          publicId = publicId.slice(0, dotIndex);
+        }
       }
 
       const uploadOptions: Record<string, unknown> = {
@@ -172,9 +192,16 @@ export class CloudinaryProvider implements StorageInterface {
 
   async download(options: DownloadOptions): Promise<DownloadResult> {
     try {
-      // Cloudinary doesn't support direct download like S3
-      // We need to fetch from the public URL
-      const publicUrl = this.getPublicUrl(options.key);
+      // Cloudinary doesn't support direct download like S3, so we fetch from
+      // the public URL. Split the key into a base + extension and pass the
+      // extension through so `getPublicUrl` can infer the correct resource
+      // type (image/video/raw). Passing the bare key would default to `raw`
+      // and 404 for image/video assets.
+      const dotIndex = options.key.lastIndexOf(".");
+      const hasExt = dotIndex > 0 && dotIndex < options.key.length - 1;
+      const baseKey = hasExt ? options.key.slice(0, dotIndex) : options.key;
+      const extension = hasExt ? options.key.slice(dotIndex + 1) : undefined;
+      const publicUrl = this.getPublicUrl(baseKey, extension);
 
       const response = await fetch(publicUrl);
       if (!response.ok) {
@@ -207,6 +234,7 @@ export class CloudinaryProvider implements StorageInterface {
 
   async delete(options: DeleteOptions): Promise<DeleteResult> {
     try {
+      const cloudinary = await this.getClient();
       // Strip extension to get public_id
       let publicId = options.key;
       const dotIndex = publicId.lastIndexOf(".");
@@ -253,6 +281,7 @@ export class CloudinaryProvider implements StorageInterface {
 
   async batchDelete(options: BatchDeleteOptions): Promise<BatchDeleteResult> {
     try {
+      const cloudinary = await this.getClient();
       // Convert keys to public_ids (strip extensions, add folder prefix)
       const publicIds = options.keys.map((key) => {
         let publicId = key;
@@ -300,7 +329,7 @@ export class CloudinaryProvider implements StorageInterface {
 
   async list(options: ListOptions = {}): Promise<ListResult> {
     try {
-      this.configure();
+      const cloudinary = await this.getClient();
       const prefix = options.prefix || "";
       const maxResults = options.maxKeys || 50;
 
@@ -366,9 +395,10 @@ export class CloudinaryProvider implements StorageInterface {
         size: Number(resource.bytes) || 0,
         lastModified: new Date(String(resource.created_at || new Date())),
         etag: String(resource.etag || ""),
-        contentType: resource.format
-          ? `${resource.resource_type}/${resource.format}`
-          : "application/octet-stream",
+        contentType: this.formatToMime(
+          String(resource.resource_type || "raw"),
+          resource.format ? String(resource.format) : undefined,
+        ),
       }));
 
       const nextContinuationToken = nextCursor ? `${type}:${nextCursor}` : undefined;
@@ -389,6 +419,7 @@ export class CloudinaryProvider implements StorageInterface {
 
   async exists(key: string): Promise<ExistsResult> {
     try {
+      const cloudinary = await this.getClient();
       // Strip extension and add config folder prefix for the public_id
       let publicId = key;
       const dotIndex = publicId.lastIndexOf(".");
@@ -464,6 +495,30 @@ export class CloudinaryProvider implements StorageInterface {
     return `${baseUrl}/${type}/upload/${publicId}${extension ? `.${extension}` : ""}`;
   }
 
+  /**
+   * Build a valid MIME type from a Cloudinary `resource_type` + `format`.
+   * Naive `${resource_type}/${format}` produces invalid types like `raw/pdf`
+   * or `image/jpg`, so map known formats to their real MIME types and fall back
+   * to `application/octet-stream` for raw/unknown assets.
+   */
+  private formatToMime(resourceType: string, format?: string): string {
+    if (!format) return "application/octet-stream";
+    const fmt = format.toLowerCase();
+    const overrides: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      svg: "image/svg+xml",
+      pdf: "application/pdf",
+      mov: "video/quicktime",
+      mp3: "audio/mpeg",
+    };
+    if (overrides[fmt]) return overrides[fmt];
+    if (resourceType === "image" || resourceType === "video") {
+      return `${resourceType}/${fmt}`;
+    }
+    return "application/octet-stream";
+  }
+
   /** Infer Cloudinary resource type from a filename or extension */
   private inferResourceType(nameOrExt: string): "image" | "video" | "raw" {
     const ext = nameOrExt.includes(".")
@@ -487,13 +542,21 @@ export class CloudinaryProvider implements StorageInterface {
 
   async deleteFolder(options: DeleteFolderOptions): Promise<DeleteFolderResult> {
     try {
+      const cloudinary = await this.getClient();
       // Cloudinary requires deleting all assets in folder first, then the
-      // folder itself. Preserve the trailing slash for the prefix delete so we
+      // folder itself. Prepend `config.folder` so this matches the prefix that
+      // `upload`/`delete`/`exists` use — otherwise a recursive delete targets
+      // the wrong (unprefixed) prefix and silently deletes nothing (or the
+      // wrong assets). Preserve the trailing slash for the prefix delete so we
       // only match `folder/*` and never a sibling like `folderXYZ/*`. Stripping
-      // the slash (the previous behavior) made `deleteFolder("folder/")` also
-      // delete `folderXYZ/...` — a data-loss hazard.
-      const folderPath = options.path.endsWith("/") ? options.path : `${options.path}/`;
-      const folderApiPath = options.path.replace(/\/$/, "");
+      // the slash made `deleteFolder("folder/")` also delete `folderXYZ/...` —
+      // a data-loss hazard.
+      const normalizedPath = options.path.replace(/\/$/, "");
+      const scopedPath = this.config.folder
+        ? `${this.config.folder}/${normalizedPath}`
+        : normalizedPath;
+      const folderPath = `${scopedPath}/`;
+      const folderApiPath = scopedPath;
 
       if (options.recursive) {
         // Delete all resources in the folder
@@ -516,12 +579,13 @@ export class CloudinaryProvider implements StorageInterface {
 
   async listFolders(_options?: ListFoldersOptions): Promise<ListFoldersResult> {
     try {
+      const cloudinary = await this.getClient();
       // Use Cloudinary Admin API to list folders
       const result = await cloudinary.api.root_folders();
 
       const folders = (result.folders || []).map((folder: Record<string, unknown>) => ({
-        name: folder.name,
-        path: folder.path,
+        name: String(folder.name ?? ""),
+        path: String(folder.path ?? ""),
       }));
 
       return {

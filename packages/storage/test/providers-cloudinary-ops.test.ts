@@ -122,9 +122,11 @@ describe("CloudinaryProvider delete/list/folder branches", () => {
     const provider = new CloudinaryProvider(config);
     const res = await provider.deleteFolder({ path: "folder/", recursive: true });
     expect(res.success).toBe(true);
-    // The trailing slash is preserved for the prefix delete so we only match
-    // `folder/*` and never a sibling like `folderXYZ/*`.
-    expect(cloudinary.api.delete_resources_by_prefix).toHaveBeenCalledWith("folder/");
+    // `config.folder` ("uploads") is prepended so this matches the prefix used
+    // by upload/delete/exists. The trailing slash is preserved for the prefix
+    // delete so we only match `uploads/folder/*` and never a sibling like
+    // `uploads/folderXYZ/*`.
+    expect(cloudinary.api.delete_resources_by_prefix).toHaveBeenCalledWith("uploads/folder/");
   });
 
   it("deleteFolder non-recursive just deletes folder", async () => {

@@ -64,7 +64,10 @@ describe("CloudinaryService full coverage", () => {
 
   it("convenience file methods", async () => {
     const cloud = new CloudinaryService(config);
-    const up = await cloud.uploadFile("a.jpg", Buffer.from("x"), "image/jpeg", { alt: "y" });
+    const up = await cloud.uploadFile("a.jpg", Buffer.from("x"), {
+      contentType: "image/jpeg",
+      metadata: { alt: "y" },
+    });
     expect(up.success).toBe(true);
     const del = await cloud.deleteFile("a.jpg");
     expect(del.success || del.error).toBeDefined();

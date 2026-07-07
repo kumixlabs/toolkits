@@ -3,14 +3,7 @@
  * Provides comprehensive folder management operations for S3-compatible storage providers
  */
 
-import {
-  type _Object,
-  CopyObjectCommand,
-  DeleteObjectsCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  type S3Client,
-} from "@aws-sdk/client-s3";
+import type { _Object, S3Client } from "@aws-sdk/client-s3";
 
 import { getMimeType } from "../helpers";
 import type {
@@ -29,6 +22,7 @@ import type {
   RenameFolderResult,
   S3Config,
 } from "../types";
+import { loadS3Sdk } from "./s3-sdk";
 
 /** S3 DeleteObjectsCommand allows at most 1000 keys per request */
 const S3_DELETE_MAX_KEYS = 1000;
@@ -41,6 +35,7 @@ async function listAllObjects(
   bucket: string,
   prefix: string,
 ): Promise<_Object[]> {
+  const { ListObjectsV2Command } = await loadS3Sdk();
   const objects: _Object[] = [];
   let continuationToken: string | undefined;
   do {
@@ -64,6 +59,7 @@ async function deleteObjectsBatched(
   bucket: string,
   keys: string[],
 ): Promise<string[]> {
+  const { DeleteObjectsCommand } = await loadS3Sdk();
   const deleted: string[] = [];
   for (let i = 0; i < keys.length; i += S3_DELETE_MAX_KEYS) {
     const batch = keys.slice(i, i + S3_DELETE_MAX_KEYS);
@@ -97,6 +93,7 @@ export class FolderOperations {
 
   async createFolder(options: CreateFolderOptions): Promise<CreateFolderResult> {
     try {
+      const { PutObjectCommand } = await loadS3Sdk();
       // Ensure path ends with /
       const folderPath = options.path.endsWith("/") ? options.path : `${options.path}/`;
 
@@ -124,6 +121,7 @@ export class FolderOperations {
 
   async deleteFolder(options: DeleteFolderOptions): Promise<DeleteFolderResult> {
     try {
+      const { DeleteObjectsCommand } = await loadS3Sdk();
       // Ensure path ends with /
       const folderPath = options.path.endsWith("/") ? options.path : `${options.path}/`;
 
@@ -173,6 +171,7 @@ export class FolderOperations {
 
   async listFolders(options: ListFoldersOptions = {}): Promise<ListFoldersResult> {
     try {
+      const { ListObjectsV2Command } = await loadS3Sdk();
       const command = new ListObjectsV2Command({
         Bucket: this.config.bucket,
         Prefix: options.prefix,
@@ -222,6 +221,7 @@ export class FolderOperations {
 
   async folderExists(path: string): Promise<FolderExistsResult> {
     try {
+      const { ListObjectsV2Command } = await loadS3Sdk();
       // Ensure path ends with /
       const folderPath = path.endsWith("/") ? path : `${path}/`;
 
@@ -260,6 +260,7 @@ export class FolderOperations {
 
   async renameFolder(options: RenameFolderOptions): Promise<RenameFolderResult> {
     try {
+      const { CopyObjectCommand } = await loadS3Sdk();
       // This is essentially a copy + delete operation for all files in the folder
       const oldPath = options.oldPath.endsWith("/") ? options.oldPath : `${options.oldPath}/`;
       const newPath = options.newPath.endsWith("/") ? options.newPath : `${options.newPath}/`;
@@ -315,6 +316,11 @@ export class FolderOperations {
 
   async copyFolder(options: CopyFolderOptions): Promise<CopyFolderResult> {
     try {
+      const { CopyObjectCommand } = await loadS3Sdk();
+      // Default to recursive when unspecified, matching `S3Service.copyFolderPath`
+      // (which defaults `recursive = true`). Previously an omitted `recursive`
+      // silently dropped nested subfolders when calling `copyFolder` directly.
+      const recursive = options.recursive ?? true;
       const sourcePath = options.sourcePath.endsWith("/")
         ? options.sourcePath
         : `${options.sourcePath}/`;
@@ -340,7 +346,7 @@ export class FolderOperations {
       for (const obj of allObjects) {
         const sourceKey = obj.Key!;
         // When not recursive, skip nested objects (files in subfolders)
-        if (!options.recursive) {
+        if (!recursive) {
           const relativeKey = sourceKey.slice(sourcePath.length);
           if (relativeKey.includes("/")) continue;
         }

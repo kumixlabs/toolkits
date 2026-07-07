@@ -3,8 +3,14 @@ import { describe, expect, it, type vi } from "vitest";
 import { S3Service } from "../src/services/s3";
 import type { S3Config } from "../src/types";
 
-function getSend(svc: S3Service): ReturnType<typeof vi.fn> {
-  return (svc as any).provider.fileOps.client.send as ReturnType<typeof vi.fn>;
+async function getSend(svc: S3Service): Promise<ReturnType<typeof vi.fn>> {
+  const fileOps = await (svc as any).provider.getFileOps();
+  return fileOps.client.send as ReturnType<typeof vi.fn>;
+}
+
+async function getFolderSend(svc: S3Service): Promise<ReturnType<typeof vi.fn>> {
+  const folderOps = await (svc as any).provider.getFolderOps();
+  return folderOps.client.send as ReturnType<typeof vi.fn>;
 }
 
 describe("S3Service full coverage", () => {
@@ -48,7 +54,7 @@ describe("S3Service full coverage", () => {
 
   it("core operations delegate to provider", async () => {
     const s3 = new S3Service(config);
-    const send = getSend(s3);
+    const send = await getSend(s3);
     send.mockResolvedValue({});
     const up = await s3.upload({ key: "a.txt", file: Buffer.from("x") });
     expect(up.success).toBe(true);
@@ -76,7 +82,7 @@ describe("S3Service full coverage", () => {
 
   it("folder operations delegate to provider", async () => {
     const s3 = new S3Service(config);
-    const folderSend = (s3 as any).provider.folderOps.client.send as ReturnType<typeof vi.fn>;
+    const folderSend = await getFolderSend(s3);
     folderSend.mockResolvedValue({});
     const cf = await s3.createFolder({ path: "folder" });
     expect(cf.success).toBe(true);
@@ -104,7 +110,7 @@ describe("S3Service full coverage", () => {
 
   it("convenience file methods", async () => {
     const s3 = new S3Service(config);
-    const send = getSend(s3);
+    const send = await getSend(s3);
     send.mockResolvedValue({});
     const up = await s3.uploadFile("a.txt", Buffer.from("x"), { contentType: "text/plain" });
     expect(up.success).toBe(true);
@@ -141,7 +147,7 @@ describe("S3Service full coverage", () => {
 
   it("folder convenience methods", async () => {
     const s3 = new S3Service(config);
-    const folderSend = (s3 as any).provider.folderOps.client.send as ReturnType<typeof vi.fn>;
+    const folderSend = await getFolderSend(s3);
     folderSend.mockResolvedValue({});
     const cf = await s3.createFolderPath("folder");
     expect(cf.success).toBe(true);

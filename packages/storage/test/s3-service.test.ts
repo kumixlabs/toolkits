@@ -36,7 +36,8 @@ describe("S3Service convenience methods", () => {
 
   it("uploadFile and getPublicUrl", async () => {
     const s3 = new S3Service(config);
-    const send = (s3 as any).provider.fileOps.client.send as ReturnType<typeof vi.fn>;
+    const fileOps = await (s3 as any).provider.getFileOps();
+    const send = fileOps.client.send as ReturnType<typeof vi.fn>;
     send.mockResolvedValueOnce({ ETag: '"etag"' });
     const res = await s3.uploadFile("a/b.txt", Buffer.from("hello"));
     expect(res.success).toBe(true);
@@ -45,7 +46,8 @@ describe("S3Service convenience methods", () => {
 
   it("downloadFile and deleteFile", async () => {
     const s3 = new S3Service(config);
-    const send = (s3 as any).provider.fileOps.client.send as ReturnType<typeof vi.fn>;
+    const fileOps = await (s3 as any).provider.getFileOps();
+    const send = fileOps.client.send as ReturnType<typeof vi.fn>;
     send
       .mockResolvedValueOnce({
         Body: makeWebStream([Buffer.from("a"), Buffer.from("b")]),
@@ -74,7 +76,8 @@ describe("S3Service convenience methods", () => {
 
   it("folder convenience methods", async () => {
     const s3 = new S3Service(config);
-    const send = (s3 as any).provider.folderOps.client.send as ReturnType<typeof vi.fn>;
+    const folderOps = await (s3 as any).provider.getFolderOps();
+    const send = folderOps.client.send as ReturnType<typeof vi.fn>;
     send
       .mockResolvedValueOnce({}) // createFolder
       .mockResolvedValueOnce({ Deleted: [{ Key: "folder/" }] }) // deleteFolder

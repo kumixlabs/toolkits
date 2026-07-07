@@ -3,8 +3,6 @@
  * Provides ULID-compatible ID generation with custom prefixes for entity identification
  */
 
-import baseX from "base-x";
-
 const prefixes = [
   "acc_", // account
   "api_", // api key
@@ -28,8 +26,34 @@ const prefixes = [
   "ws_", // workspace
 ] as const;
 
-// ULID uses base32 encoding
-const base32 = baseX("0123456789ABCDEFGHJKMNPQRSTVWXYZ");
+// Crockford base32 alphabet used by ULID
+const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
+/**
+ * Encodes a 16-byte (128-bit) buffer into a fixed-length 26-character
+ * Crockford base32 ULID string. Unlike big-number base encoders, this pads
+ * the output to a constant length so IDs remain lexicographically sortable
+ * regardless of leading zero bytes.
+ */
+function encodeULID(buf: Uint8Array): string {
+  let bits = 0;
+  let value = 0;
+  let output = "";
+
+  for (let i = 0; i < buf.length; i++) {
+    value = (value << 8) | buf[i];
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      output += CROCKFORD[(value >>> bits) & 31];
+    }
+  }
+  if (bits > 0) {
+    output += CROCKFORD[(value << (5 - bits)) & 31];
+  }
+
+  return output;
+}
 
 /**
  * Creates a ULID-compatible buffer (48 bits timestamp + 80 bits randomness)
@@ -77,7 +101,7 @@ function createULIDBuffer(): Uint8Array {
  */
 export const baseIdCustom = ({ prefix }: { prefix: string }) => {
   const buf = createULIDBuffer();
-  const id = base32.encode(buf);
+  const id = encodeULID(buf);
 
   return `${prefix}${id}`;
 };

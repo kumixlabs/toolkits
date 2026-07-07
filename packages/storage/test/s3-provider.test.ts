@@ -21,7 +21,8 @@ describe("S3Provider basic", () => {
 
   it("upload/download/delete/list/exists basic flows", async () => {
     const provider = new S3Provider(config);
-    const send = (provider as any).fileOps.client.send as ReturnType<typeof vi.fn>;
+    const fileOps = await (provider as any).getFileOps();
+    const send = fileOps.client.send as ReturnType<typeof vi.fn>;
     send.mockResolvedValue({});
     const up = await provider.upload({ key: "a.txt", file: Buffer.from("x") });
     expect(up.success).toBe(true);

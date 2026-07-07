@@ -4,6 +4,7 @@
  */
 
 import { isDevelopment } from "../../constants/development";
+import { logger } from "../logging/logger";
 
 /**
  * Extended Error interface for SWR compatibility
@@ -167,7 +168,7 @@ export async function fetcher<T>(
   }
 
   if (options?.log && isDevelopment) {
-    console.log(`[request] ${endpoint}`, data);
+    logger.info(`[request] ${endpoint}`, data);
   }
 
   // Treat non-2xx as an error instead of returning `undefined` as data —

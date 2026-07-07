@@ -75,6 +75,28 @@ export class NodemailerProvider implements IEmailProvider {
   async send(options: SendEmailOptions): Promise<EmailResult> {
     try {
       const transporter = await this.getTransporter();
+
+      // Build the outgoing headers up front so tags/priority can be merged in a
+      // single place. SMTP has no native tag concept, so forward each tag as an
+      // `X-Tag-<name>` header instead of silently dropping it (Resend forwards
+      // tags natively).
+      const headers: Record<string, string> = {};
+      if (options.headers) {
+        for (const [k, v] of Object.entries(options.headers)) {
+          headers[k] = String(v).replace(/[\r\n]/g, "");
+        }
+      }
+      if (options.tags) {
+        for (const [name, value] of Object.entries(options.tags)) {
+          headers[`X-Tag-${name.replace(/[\r\n]/g, "")}`] = String(value).replace(/[\r\n]/g, "");
+        }
+      }
+      // Always also set the numeric X-Priority header for clients that ignore
+      // the symbolic priority field.
+      if (options.priority) {
+        headers["X-Priority"] = String(options.priority);
+      }
+
       const info: any = await transporter.sendMail({
         // Route `from` through formatEmailAddress so the display name is
         // quoted/escaped and CR/LF is stripped (header-injection hardening).
@@ -100,21 +122,7 @@ export class NodemailerProvider implements IEmailProvider {
                 ? "low"
                 : "normal",
         replyTo: this.config.replyTo ? stripCrlf(this.config.replyTo) : undefined,
-        headers: options.headers
-          ? {
-              ...Object.fromEntries(
-                Object.entries(options.headers).map(([k, v]) => [
-                  k,
-                  String(v).replace(/[\r\n]/g, ""),
-                ]),
-              ),
-              // Always also set the numeric X-Priority header for clients that
-              // ignore the symbolic priority field.
-              ...(options.priority ? { "X-Priority": String(options.priority) } : {}),
-            }
-          : options.priority
-            ? { "X-Priority": String(options.priority) }
-            : undefined,
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
         attachments: options.attachments?.map((a) => ({
           filename: a.filename,
           content: a.content as any,

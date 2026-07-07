@@ -102,9 +102,9 @@ export class ResendProvider implements IEmailProvider {
         };
       }
 
-      // Test API key by making a simple request
-      // Note: Resend doesn't have a dedicated validation endpoint,
-      // so we'll just check if the API key format is valid
+      // Resend has no dedicated credential-verification endpoint (unlike SMTP's
+      // `transporter.verify()`), so validation is limited to a format check on
+      // the API key. This intentionally does NOT contact the Resend API.
       if (!this.config.apiKey.startsWith("re_")) {
         return {
           valid: false,

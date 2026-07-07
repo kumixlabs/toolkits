@@ -42,7 +42,7 @@
  * );
  * ```
  */
-export const getTimeZones = (): { label: string; value: string }[] => {
+export const getTimeZones = (): { label: string; value: string; numericOffset: number }[] => {
   // `Intl.supportedValuesOf` is unavailable on older engines (e.g. Node <18.14,
   // older Safari). Fall back to a small common list so the helper never throws.
   const safeSupported = (): string[] => {

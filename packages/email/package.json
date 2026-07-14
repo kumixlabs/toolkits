@@ -52,7 +52,7 @@
     "resend"
   ],
   "devDependencies": {
-    "@kumix/tsconfig": "catalog:",
+    "@kumix/tsconfig": "^0.1.0",
     "@types/node": "^26.1.1",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.2.17",
@@ -60,7 +60,7 @@
     "react": "^19.2.7",
     "react-email": "^6.8.1",
     "resend": "^6.17.2",
-    "tsdown": "catalog:",
+    "tsdown": "^0.22.7",
     "typescript": "catalog:"
   },
   "peerDependencies": {

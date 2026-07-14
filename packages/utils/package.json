@@ -56,14 +56,14 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@kumix/tsconfig": "catalog:",
+    "@kumix/tsconfig": "^0.1.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/ms": "^2.1.0",
     "@types/node": "^26.1.1",
     "bcryptjs": "^3.0.3",
     "jsdom": "^29.1.1",
     "jsonwebtoken": "^9.0.3",
-    "tsdown": "catalog:",
+    "tsdown": "^0.22.7",
     "typescript": "catalog:"
   },
   "publishConfig": {

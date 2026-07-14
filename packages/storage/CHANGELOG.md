@@ -5,7 +5,6 @@
 ### Patch Changes
 
 - [`70db108`](https://github.com/kumixlabs/toolkits/commit/70db108655ec33124b44573370f25328b6cd615b) Thanks [@kumixio](https://github.com/kumixio)! - Fix multiple bugs and align the optional-dependency loading with the package's cross-runtime design:
-
   - Load the optional peer deps (`@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `cloudinary`) via dynamic `import()` so partial installs no longer break the `./s3` and `./cloudinary` subpaths at module load.
   - Cloudinary `deleteFolder`: prepend `config.folder` so recursive deletes target the same prefix used by `upload`/`delete`/`exists`.
   - Cloudinary `download`: pass the extension through so the resource type (image/video/raw) is inferred correctly instead of defaulting to `raw` and 404-ing.

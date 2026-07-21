@@ -60,7 +60,7 @@
     "react": "^19.2.7",
     "react-email": "^6.9.0",
     "resend": "^6.17.2",
-    "tsdown": "^0.22.9",
+    "tsdown": "^0.22.12",
     "typescript": "catalog:"
   },
   "peerDependencies": {

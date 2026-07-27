@@ -61,7 +61,7 @@
     "@types/ms": "^2.1.0",
     "@types/node": "^26.1.1",
     "bcryptjs": "^3.0.3",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.0",
     "jsonwebtoken": "^9.0.3",
     "tsdown": "^0.22.14",
     "typescript": "catalog:"

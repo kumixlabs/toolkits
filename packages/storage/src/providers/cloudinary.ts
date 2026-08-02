@@ -3,6 +3,7 @@
  * Provides cloud storage operations using Cloudinary's API for media management
  */
 
+import { bufferToBase64 } from "../helpers";
 import type {
   BatchDeleteOptions,
   BatchDeleteResult,
@@ -96,7 +97,7 @@ export class CloudinaryProvider implements StorageInterface {
       if (typeof options.file === "string") {
         fileData = options.file;
       } else {
-        fileData = `data:${options.contentType || "application/octet-stream"};base64,${Buffer.from(options.file).toString("base64")}`;
+        fileData = `data:${options.contentType || "application/octet-stream"};base64,${bufferToBase64(options.file instanceof Uint8Array ? options.file : new Uint8Array(options.file))}`;
       }
 
       // Determine resource type based on content type
@@ -211,8 +212,7 @@ export class CloudinaryProvider implements StorageInterface {
         };
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      const content = Buffer.from(arrayBuffer);
+      const content = new Uint8Array(await response.arrayBuffer());
 
       return {
         success: true,

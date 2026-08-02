@@ -202,10 +202,10 @@ export class ResendProvider implements IEmailProvider {
       if (options.attachments) {
         emailData.attachments = options.attachments.map((attachment) => ({
           filename: attachment.filename,
-          content: attachment.content as string | Buffer,
+          content: attachment.content,
           content_type: attachment.contentType,
           cid: attachment.cid,
-        }));
+        })) as typeof emailData.attachments;
       }
 
       // Forward scheduled delivery to Resend (`scheduled_at`). Previously this

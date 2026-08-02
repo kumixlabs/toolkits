@@ -7,7 +7,7 @@ import type { S3Client } from "@aws-sdk/client-s3";
 
 import { FileOperations } from "../operations/file-operations";
 import { FolderOperations } from "../operations/folder-operations";
-import { loadS3Sdk } from "../operations/s3-sdk";
+import { loadFetchHandler, loadS3Sdk } from "../operations/s3-sdk";
 import type {
   BatchDeleteOptions,
   BatchDeleteResult,
@@ -82,14 +82,16 @@ export class S3Provider implements StorageInterface {
 
   private async getClient(): Promise<S3Client> {
     if (!this._client) {
-      const { S3Client } = await loadS3Sdk();
+      const [{ S3Client }, { FetchHttpHandler }] = await Promise.all([
+        loadS3Sdk(),
+        loadFetchHandler(),
+      ]);
       this._client = new S3Client({
         region: this.config.region,
+        requestHandler: new FetchHttpHandler(),
         credentials: {
           accessKeyId: this.config.accessKeyId,
           secretAccessKey: this.config.secretAccessKey,
-          // Surface STS / temporary credentials when provided. Previously the
-          // session token was dropped, breaking AWS STS / SSO / role-chain auth.
           ...(this.config.sessionToken ? { sessionToken: this.config.sessionToken } : {}),
         },
         endpoint: this.config.endpoint,

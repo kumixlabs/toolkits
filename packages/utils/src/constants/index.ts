@@ -22,6 +22,5 @@ export * from "./domain/special";
 export * from "./colors";
 export * from "./development";
 export * from "./env";
-export * from "./framer-motion";
 export * from "./localhost";
 export * from "./reserved-slugs";

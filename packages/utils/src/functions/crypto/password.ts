@@ -4,8 +4,6 @@
  * Includes validation and error handling for production use
  */
 
-import { randomInt } from "node:crypto";
-
 import bcrypt from "bcryptjs";
 
 import { logger } from "../logging/logger";
@@ -89,7 +87,7 @@ export async function hashPassword(
     // callers learn about the limit instead of getting a false sense of
     // uniqueness. (Pre-hashing e.g. SHA-256 would also work, but changes the
     // hash format and is left as a caller concern.)
-    const passwordBytes = Buffer.byteLength(password, "utf8");
+    const passwordBytes = new TextEncoder().encode(password).length;
     if (passwordBytes > 72) {
       logger.warn("Password hashing: Password exceeds bcrypt's 72-byte limit");
       return null;
@@ -306,9 +304,10 @@ export function generateSecurePassword(
   }
 
   let password = "";
+  const randomBytes = new Uint32Array(validLength);
+  globalThis.crypto.getRandomValues(randomBytes);
   for (let i = 0; i < validLength; i++) {
-    // Use a cryptographically secure RNG to avoid bias and predictability
-    const randomIndex = randomInt(0, charset.length);
+    const randomIndex = randomBytes[i] % charset.length;
     password += charset[randomIndex];
   }
 

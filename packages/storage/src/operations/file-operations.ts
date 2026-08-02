@@ -76,7 +76,7 @@ export class FileOperations {
         etag: result.ETag?.replace(/"/g, ""),
         size:
           typeof options.file === "string"
-            ? Buffer.byteLength(options.file, "utf8")
+            ? new TextEncoder().encode(options.file).length
             : options.file.length,
       };
     } catch (error) {
@@ -115,7 +115,13 @@ export class FileOperations {
         chunks.push(value);
       }
 
-      const data = Buffer.concat(chunks);
+      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const data = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        data.set(chunk, offset);
+        offset += chunk.length;
+      }
 
       return {
         success: true,

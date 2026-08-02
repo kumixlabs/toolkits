@@ -60,7 +60,7 @@ describe("S3Service convenience methods", () => {
       .mockResolvedValueOnce({});
     const dl = await s3.downloadFile("a/b.txt");
     expect(dl.success).toBe(true);
-    expect(dl.content?.toString()).toBe("ab");
+    expect(new TextDecoder().decode(dl.content)).toBe("ab");
     const del = await s3.deleteFile("a/b.txt");
     expect(del.success).toBe(true);
   });

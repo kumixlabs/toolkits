@@ -62,7 +62,7 @@ describe("S3 FileOperations", () => {
     const ops = new FileOperations(client, config);
     const res = await ops.download({ key: "a/b.txt" });
     expect(res.success).toBe(true);
-    expect(res.content?.toString()).toBe("ab");
+    expect(new TextDecoder().decode(res.content)).toBe("ab");
     expect(res.contentType).toBe("text/plain");
     expect(res.etag).toBe("etag");
     expect(res.metadata?.x).toBe("y");

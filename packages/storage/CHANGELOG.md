@@ -1,5 +1,11 @@
 # @kumix/storage
 
+## 0.1.3
+
+### Patch Changes
+
+- [`3e81f8b`](https://github.com/kumixlabs/toolkits/commit/3e81f8beb5c6482c444a027da0d40d89a08eed7d) Thanks [@kumixio](https://github.com/kumixio)! - Fix test assertions for S3 download operations to correctly decode content buffers across runtimes.
+
 ## 0.1.2
 
 ### Patch Changes

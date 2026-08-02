@@ -1,5 +1,11 @@
 # @kumix/utils
 
+## 0.1.3
+
+### Patch Changes
+
+- [`3e81f8b`](https://github.com/kumixlabs/toolkits/commit/3e81f8beb5c6482c444a027da0d40d89a08eed7d) Thanks [@kumixio](https://github.com/kumixio)! - Refactor random string and secure password generation to use `globalThis.crypto.getRandomValues` instead of `node:crypto`, enabling cross-runtime support (Node, Bun, Deno, Cloudflare Workers).
+
 ## 0.1.2
 
 ### Patch Changes

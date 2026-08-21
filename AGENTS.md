@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Bun monorepo for Kumix Toolkits. Turborepo handles task orchestration, Biome lints/formats, Vitest tests, Changesets versioning/publishing. Node >=24, Bun >=1.3.0.
+Bun monorepo for Kumix Toolkits. Turborepo handles task orchestration, Biome lints/formats, Vitest tests, Changesets versioning/publishing. Node >=24, Bun >=1.4.0.
 
 ## Monorepo Layout
 

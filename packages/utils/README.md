@@ -261,7 +261,7 @@ import { ... } from '@kumix/utils/server';
 ### Entry Points
 
 - **`@kumix/utils`** — Safe everywhere. Constants use runtime-guarded `process.env` access (returns `undefined` when process is unavailable). Browser-only functions have SSR guards.
-- **`@kumix/utils/server`** — Node.js / Bun / Deno only. Contains `generateRandomString` (node:crypto), JWT utilities (jsonwebtoken), password hashing (bcryptjs), and `parseDatetime` (chrono-node).
+- **`@kumix/utils/server`** — Node.js / Bun / Deno only. Contains `generateRandomString` (Web Crypto via `globalThis.crypto`), JWT utilities (jsonwebtoken), password hashing (bcryptjs), and `parseDatetime` (chrono-node).
 
 ## Links
 

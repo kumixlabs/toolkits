@@ -1,7 +1,7 @@
 # Kumix Toolkits
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Bun](https://img.shields.io/badge/bun-1.3.14-black)](https://bun.sh)
+[![Bun](https://img.shields.io/badge/bun-1.4.0-black)](https://bun.sh)
 
 A collection of ready-to-use packages for modern application development. This monorepo includes reusable packages for email, storage, and common utilities.
 
@@ -25,7 +25,7 @@ A collection of ready-to-use packages for modern application development. This m
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) 1.3.14 or higher
+- [Bun](https://bun.sh) 1.4.0 or higher
 - Node.js 24 or higher
 
 ### Installation

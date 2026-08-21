@@ -20,7 +20,7 @@ Kumix Toolkits is a community-driven collection of packages that standardize com
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) 1.3.14 or higher
+- [Bun](https://bun.sh) 1.4.0 or higher
 - Node.js 24 or higher
 - Git
 
@@ -111,10 +111,10 @@ bun run lint      # Lint only
 
 Use descriptive branch names:
 
-- `feature/add-new-animation-component` - For new features
-- `fix/hook-hydration-bug` - For bug fixes
+- `feature/add-email-template` - For new features
+- `fix/s3-upload-error` - For bug fixes
 - `docs/update-readme` - For documentation
-- `refactor/simplify-components` - For refactoring
+- `refactor/simplify-helpers` - For refactoring
 
 ### Commit Messages
 
@@ -194,7 +194,7 @@ Make sure:
 3. **Create a Pull Request** on GitHub targeting the `main` branch
 
 4. **Fill in the PR template** with:
-   - **Clear title**: Use conventional commit format (e.g., "feat(animation): add text reveal component")
+   - **Clear title**: Use conventional commit format (e.g., "feat(email): add invoice template")
    - **Description**: Explain what changed and why
    - **Breaking changes**: Clearly document any breaking changes
    - **Related issues**: Reference issues (e.g., "Fixes #123", "Closes #456")

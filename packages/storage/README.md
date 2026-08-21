@@ -14,6 +14,7 @@ bun add @kumix/storage
 
 # Install peer dependencies for the provider(s) you need
 npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner  # For S3-compatible providers
+npm install @smithy/fetch-http-handler  # Optional: cross-runtime fetch transport for the S3 SDK (recommended for Cloudflare Workers)
 npm install cloudinary  # For Cloudinary
 ```
 

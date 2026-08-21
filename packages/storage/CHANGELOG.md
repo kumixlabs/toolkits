@@ -1,5 +1,11 @@
 # @kumix/storage
 
+## 0.1.4
+
+### Patch Changes
+
+- [`9a09c1d`](https://github.com/kumixlabs/toolkits/commit/9a09c1debee9d6d0696d6a814a02b39e412fe097) Thanks [@kumixio](https://github.com/kumixio)! - Mark `@smithy/fetch-http-handler` as an optional peer dependency, matching the dynamic import with graceful fallback in the S3 SDK transport. Document it in the README install instructions.
+
 ## 0.1.3
 
 ### Patch Changes

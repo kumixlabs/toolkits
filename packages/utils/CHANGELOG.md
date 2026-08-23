@@ -1,5 +1,19 @@
 # @kumix/utils
 
+## 0.2.0
+
+### Minor Changes
+
+- [`9c306df`](https://github.com/kumixlabs/toolkits/commit/9c306df4bd173a96c9d72a4bd560a9137b661275) Thanks [@kumixio](https://github.com/kumixio)! - Breaking: `hashPassword` and `generateJWT` now throw on invalid input instead of returning `null`. Rule: generation functions throw on misuse (caller bug), verification functions keep returning `{ isValid, error }` result objects. Update null-checks to try/catch.
+
+### Patch Changes
+
+- [`9c306df`](https://github.com/kumixlabs/toolkits/commit/9c306df4bd173a96c9d72a4bd560a9137b661275) Thanks [@kumixio](https://github.com/kumixio)! - Fix `generateJWT` dropping caller-supplied `exp` claim, which produced non-expiring tokens when `exp` was passed
+
+- [`9c306df`](https://github.com/kumixlabs/toolkits/commit/9c306df4bd173a96c9d72a4bd560a9137b661275) Thanks [@kumixio](https://github.com/kumixio)! - Remove unused `base-x` dependency
+
+- [`9c306df`](https://github.com/kumixlabs/toolkits/commit/9c306df4bd173a96c9d72a4bd560a9137b661275) Thanks [@kumixio](https://github.com/kumixio)! - Fix modulo bias in `generateSecurePassword` by using rejection sampling (discarding Uint32 values above the largest multiple of the charset length)
+
 ## 0.1.3
 
 ### Patch Changes

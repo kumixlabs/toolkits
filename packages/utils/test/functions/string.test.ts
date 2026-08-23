@@ -30,6 +30,10 @@ describe("String", () => {
   it("truncate should shorten strings", () => {
     expect(truncate("Hello Kumix", 5)).toBe("He...");
     expect(truncate("Hi", 5)).toBe("Hi");
+    // Branch coverage: null/empty input, short lengths that can't fit an ellipsis
+    expect(truncate(null, 5)).toBeNull();
+    expect(truncate("Hello", 2)).toBe("He");
+    expect(truncate("Hello", 3)).toBe("Hel");
   });
 
   it("currencyFormatter should format currency", () => {
@@ -59,6 +63,16 @@ describe("String", () => {
     expect(toCamelCase("user_name")).toBe("userName");
     expect(toCamelCase("first_name_last_name")).toBe("firstNameLastName");
     expect(toCamelCase("alreadyCamel")).toBe("alreadyCamel");
+  });
+
+  it("toCamelCase handles edge inputs", () => {
+    // Branch coverage: empty string, separator-only string, kebab/space/Pascal
+    expect(toCamelCase("")).toBe("");
+    expect(toCamelCase("---")).toBe("");
+    expect(toCamelCase("user-name")).toBe("userName");
+    expect(toCamelCase("first name")).toBe("firstName");
+    expect(toCamelCase("PascalCase")).toBe("pascalCase");
+    expect(toCamelCase("UPPER")).toBe("upper");
   });
 
   it("combineWords should join with and", () => {

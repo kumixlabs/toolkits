@@ -38,70 +38,55 @@ interface VerifyPasswordResult {
  *
  * @param password - The plain text password to hash
  * @param options - Hashing options
- * @returns Promise that resolves to the hashed password or null if failed
+ * @returns Promise that resolves to the hashed password
+ * @throws Error on invalid input (empty password, salt rounds outside 4–20,
+ *   or password longer than bcrypt's 72-byte limit) or on internal failure.
+ *   Invalid input is a caller bug — throw instead of returning null so it
+ *   surfaces immediately rather than propagating `null` into storage.
  *
  * @example
  * ```typescript
- * import { hashPassword } from '@kumix/utils';
+ * import { hashPassword } from '@kumix/utils/server';
  *
  * // Basic usage
  * const hashedPassword = await hashPassword('userPassword123');
- * if (hashedPassword) {
- *   // Store hashedPassword in database
- *   await saveUser({ email, password: hashedPassword });
- * }
+ * await saveUser({ email, password: hashedPassword });
  *
  * // With custom salt rounds
  * const hashedPassword = await hashPassword('userPassword123', {
  *   saltRounds: 14
  * });
- *
- * // Error handling
- * const hashedPassword = await hashPassword('userPassword123');
- * if (!hashedPassword) {
- *   throw new Error('Failed to hash password');
- * }
  * ```
  */
 export async function hashPassword(
   password: string,
   options: HashPasswordOptions = {},
-): Promise<string | null> {
+): Promise<string> {
   // Validate input
   if (!password || typeof password !== "string" || password.length < 1) {
-    logger.warn("Password hashing: Password must be a non-empty string");
-    return null;
+    throw new Error("Password must be a non-empty string");
   }
 
   const { saltRounds = DEFAULT_SALT_ROUNDS } = options;
 
   // Validate salt rounds
   if (typeof saltRounds !== "number" || saltRounds < 4 || saltRounds > 20) {
-    logger.warn("Password hashing: Salt rounds must be between 4 and 20");
-    return null;
+    throw new Error("Salt rounds must be between 4 and 20");
   }
 
-  try {
-    // bcrypt silently truncates inputs longer than 72 bytes, which makes
-    // distinct long passwords collide. Reject oversize inputs explicitly so
-    // callers learn about the limit instead of getting a false sense of
-    // uniqueness. (Pre-hashing e.g. SHA-256 would also work, but changes the
-    // hash format and is left as a caller concern.)
-    const passwordBytes = new TextEncoder().encode(password).length;
-    if (passwordBytes > 72) {
-      logger.warn("Password hashing: Password exceeds bcrypt's 72-byte limit");
-      return null;
-    }
-
-    // Generate salt and hash password
-    const salt = await bcrypt.genSalt(saltRounds);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    return hashedPassword;
-  } catch (error) {
-    logger.error("Password hashing: Failed to hash password", { error });
-    return null;
+  // bcrypt silently truncates inputs longer than 72 bytes, which makes
+  // distinct long passwords collide. Reject oversize inputs explicitly so
+  // callers learn about the limit instead of getting a false sense of
+  // uniqueness. (Pre-hashing e.g. SHA-256 would also work, but changes the
+  // hash format and is left as a caller concern.)
+  if (new TextEncoder().encode(password).length > 72) {
+    throw new Error("Password exceeds bcrypt's 72-byte limit");
   }
+
+  // Generate salt and hash password. bcrypt failures propagate as
+  // exceptions instead of being swallowed into `null`.
+  const salt = await bcrypt.genSalt(saltRounds);
+  return bcrypt.hash(password, salt);
 }
 
 /**
@@ -303,12 +288,20 @@ export function generateSecurePassword(
     charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   }
 
+  // Rejection sampling: `2**32 % charset.length` is nonzero for most
+  // charsets, so naive `% charset.length` skews toward lower indices.
+  // Discard values at/above the largest multiple of charset.length instead.
+  const limit = Math.floor(2 ** 32 / charset.length) * charset.length;
+  const pool = new Uint32Array(validLength);
+  let index = 0;
   let password = "";
-  const randomBytes = new Uint32Array(validLength);
-  globalThis.crypto.getRandomValues(randomBytes);
-  for (let i = 0; i < validLength; i++) {
-    const randomIndex = randomBytes[i] % charset.length;
-    password += charset[randomIndex];
+  while (password.length < validLength) {
+    if (index >= pool.length) {
+      globalThis.crypto.getRandomValues(pool);
+      index = 0;
+    }
+    const value = pool[index++];
+    if (value < limit) password += charset[value % charset.length];
   }
 
   return password;

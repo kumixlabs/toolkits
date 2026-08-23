@@ -63,11 +63,12 @@ interface JWTVerificationResult {
  * @param payload - The data to encode in the token
  * @param secret - The secret key for signing the token
  * @param options - Token generation options
- * @returns The generated JWT token or null if failed
+ * @returns The generated JWT token
+ * @throws Error on invalid payload/secret or signing failure
  *
  * @example
  * ```typescript
- * import { generateJWT } from '@kumix/utils';
+ * import { generateJWT } from '@kumix/utils/server';
  *
  * // Basic usage
  * const token = generateJWT(
@@ -90,50 +91,43 @@ interface JWTVerificationResult {
  * );
  * ```
  */
-export function generateJWT(
-  payload: JWTPayload,
-  secret: string,
-  options: JWTOptions = {},
-): string | null {
-  // Validate inputs
+export function generateJWT(payload: JWTPayload, secret: string, options: JWTOptions = {}): string {
+  // Validate inputs. Invalid input is a caller bug — throw (consistent with
+  // `hashPassword`) so it surfaces immediately instead of returning `null`
+  // that silently propagates to storage/transport.
   if (!payload || typeof payload !== "object") {
-    logger.warn("JWT generation: Payload must be a valid object");
-    return null;
+    throw new Error("JWT payload must be a valid object");
   }
 
   if (!payload.userId || typeof payload.userId !== "string") {
-    logger.warn("JWT generation: userId is required in payload");
-    return null;
+    throw new Error("userId is required in JWT payload");
   }
 
   if (!payload.email || typeof payload.email !== "string") {
-    logger.warn("JWT generation: email is required in payload");
-    return null;
+    throw new Error("email is required in JWT payload");
   }
 
   if (!secret || typeof secret !== "string") {
-    logger.warn("JWT generation: Secret must be a non-empty string");
-    return null;
+    throw new Error("JWT secret must be a non-empty string");
   }
 
   const { expiresIn = "7d", issuer, audience } = options;
 
-  const { exp, ...cleanPayload } = payload;
+  // Keep a caller-supplied `exp` claim in the payload: jsonwebtoken honors
+  // payload `exp` directly, whereas stripping it (previous behavior) produced
+  // a token with NO expiration while skipping the `expiresIn` default —
+  // i.e. a token intended to expire lived forever.
+  const { exp } = payload;
 
-  try {
-    const signOptions = {
-      ...(typeof exp === "undefined" ? { expiresIn } : {}),
-      ...(issuer && { issuer }),
-      ...(audience && { audience }),
-    } as jwt.SignOptions;
+  const signOptions = {
+    ...(typeof exp === "undefined" ? { expiresIn } : {}),
+    ...(issuer && { issuer }),
+    ...(audience && { audience }),
+  } as jwt.SignOptions;
 
-    const token = jwt.sign(cleanPayload, secret, signOptions);
-
-    return token;
-  } catch (error) {
-    logger.error("JWT generation: Failed to generate token", { error });
-    return null;
-  }
+  // jwt.sign failures (bad secret format, invalid expiresIn string, ...)
+  // propagate as exceptions instead of being swallowed into `null`.
+  return jwt.sign(payload, secret, signOptions);
 }
 
 /**

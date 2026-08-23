@@ -76,26 +76,36 @@ describe("generateJWT", () => {
     expect(decoded?.email).toBe("u@x.com");
   });
 
-  it("returns null when payload is not an object", () => {
-    expect(generateJWT(null as never, SECRET)).toBeNull();
+  it("throws when payload is not an object", () => {
+    expect(() => generateJWT(null as never, SECRET)).toThrow();
   });
 
-  it("returns null when userId is missing", () => {
-    expect(generateJWT({ email: "u@x.com" } as never, SECRET)).toBeNull();
+  it("keeps caller-supplied exp claim and rejects the token once expired", () => {
+    // Regression: a caller-supplied `exp` used to be stripped from the payload
+    // while the `expiresIn` default was also skipped, producing a token with
+    // NO expiration. It must survive in the payload and be enforced.
+    const pastExp = Math.floor(Date.now() / 1000) - 10;
+    const token = generateJWT({ userId: "1", email: "u@x.com", exp: pastExp }, SECRET);
+    expect(decodeJWT(token as string)?.exp).toBe(pastExp);
+    expect(verifyJWT(token as string, SECRET).isValid).toBe(false);
   });
 
-  it("returns null when email is missing", () => {
-    expect(generateJWT({ userId: "1" } as never, SECRET)).toBeNull();
+  it("throws when userId is missing", () => {
+    expect(() => generateJWT({ email: "u@x.com" } as never, SECRET)).toThrow();
   });
 
-  it("returns null when secret is empty", () => {
-    expect(generateJWT({ userId: "1", email: "u@x.com" }, "")).toBeNull();
+  it("throws when email is missing", () => {
+    expect(() => generateJWT({ userId: "1" } as never, SECRET)).toThrow();
   });
 
-  it("returns null when signing throws (circular payload)", () => {
+  it("throws when secret is empty", () => {
+    expect(() => generateJWT({ userId: "1", email: "u@x.com" }, "")).toThrow();
+  });
+
+  it("throws when signing fails (circular payload)", () => {
     const payload: Record<string, unknown> = { userId: "1", email: "u@x.com" };
     payload.self = payload;
-    expect(generateJWT(payload as never, SECRET)).toBeNull();
+    expect(() => generateJWT(payload as never, SECRET)).toThrow();
   });
 });
 
@@ -201,14 +211,14 @@ describe("hashPassword", () => {
     expect(hash?.startsWith("$2")).toBe(true);
   });
 
-  it("returns null for empty or non-string password", async () => {
-    expect(await hashPassword("")).toBeNull();
-    expect(await hashPassword(null as never)).toBeNull();
+  it("throws for empty or non-string password", async () => {
+    await expect(hashPassword("")).rejects.toThrow();
+    await expect(hashPassword(null as never)).rejects.toThrow();
   });
 
-  it("returns null for out-of-range salt rounds", async () => {
-    expect(await hashPassword("secret123", { saltRounds: 2 })).toBeNull();
-    expect(await hashPassword("secret123", { saltRounds: 50 })).toBeNull();
+  it("throws for out-of-range salt rounds", async () => {
+    await expect(hashPassword("secret123", { saltRounds: 2 })).rejects.toThrow();
+    await expect(hashPassword("secret123", { saltRounds: 50 })).rejects.toThrow();
   });
 
   it("respects custom salt rounds", async () => {

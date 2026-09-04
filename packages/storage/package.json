@@ -58,13 +58,13 @@
     "supabase"
   ],
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.1125.0",
-    "@aws-sdk/s3-request-presigner": "^3.1125.0",
+    "@aws-sdk/client-s3": "^3.1126.0",
+    "@aws-sdk/s3-request-presigner": "^3.1126.0",
     "@kumix/tsconfig": "^0.1.0",
-    "@smithy/fetch-http-handler": "^5.7.2",
+    "@smithy/fetch-http-handler": "^5.8.0",
     "@types/node": "^26.4.1",
     "cloudinary": "^2.11.0",
-    "tsdown": "^0.22.14",
+    "tsdown": "^0.23.0",
     "typescript": "catalog:"
   },
   "peerDependencies": {

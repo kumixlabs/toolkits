@@ -4,16 +4,15 @@
  * Essential for component styling and conditional class application
  */
 
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { cn as _cn } from "cn";
 
 /**
  * Merges Tailwind class names, resolving any conflicts.
- * This utility combines clsx for conditional classes with tailwind-merge
- * to properly handle Tailwind CSS class conflicts.
+ * Combines clsx-style arguments (strings, arrays, objects, conditionals) with
+ * Tailwind CSS conflict resolution.
  *
- * @param inputs - An array of class names, objects, or arrays to merge
- * @returns A string of merged and optimized class names
+ * @param inputs - Class names, conditional expressions, arrays, or objects to merge
+ * @returns Space-separated merged class name string
  *
  * @example
  * ```tsx
@@ -38,6 +37,4 @@ import { twMerge } from "tailwind-merge";
  * </div>
  * ```
  */
-export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs));
-}
+export const cn = _cn;

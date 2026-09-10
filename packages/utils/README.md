@@ -13,6 +13,16 @@ npm install @kumix/utils
 bun add @kumix/utils
 ```
 
+### Peer Dependencies
+
+This package expects the following peer dependencies:
+
+```bash
+npm install @paralleldrive/cuid2 @sindresorhus/slugify chrono-node cn consola ms nanoid
+# or
+bun add @paralleldrive/cuid2 @sindresorhus/slugify chrono-node cn consola ms nanoid
+```
+
 ## Quick Start
 
 ```typescript
@@ -41,7 +51,7 @@ const short = truncate("Long text here...", 20); // "Long text here..."
 
 - **Type-Safe**: Full TypeScript support with comprehensive types
 - **Tree-Shakeable**: Import only what you need
-- **Zero Dependencies**: Most utilities have no external dependencies
+- **Unbundled Peer Dependencies**: Uses peer dependencies to avoid duplicate runtime copies
 - **Client & Server**: Works in both browser and Node.js environments
 - **Well-Tested**: Comprehensive test coverage
 - **ESM-Only**: Modern ES modules format

@@ -1,5 +1,11 @@
 # @kumix/utils
 
+## 0.3.0
+
+### Minor Changes
+
+- [`49bf203`](https://github.com/kumixlabs/toolkits/commit/49bf203977a6fcd605f23e41c384886ba114bf89) Thanks [@kumixio](https://github.com/kumixio)! - Replace `clsx` and `tailwind-merge` with `cn` package and move external libraries (`@paralleldrive/cuid2`, `@sindresorhus/slugify`, `chrono-node`, `cn`, `consola`, `ms`, `nanoid`) to `peerDependencies`
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @kumix/storage
 
+## 0.1.5
+
+### Patch Changes
+
+- [`49bf203`](https://github.com/kumixlabs/toolkits/commit/49bf203977a6fcd605f23e41c384886ba114bf89) Thanks [@kumixio](https://github.com/kumixio)! - Update peer dependencies and dev dependencies for `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, and `@smithy/fetch-http-handler`
+
 ## 0.1.4
 
 ### Patch Changes

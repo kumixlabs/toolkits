@@ -1,5 +1,11 @@
 # @kumix/email
 
+## 0.1.3
+
+### Patch Changes
+
+- [`49bf203`](https://github.com/kumixlabs/toolkits/commit/49bf203977a6fcd605f23e41c384886ba114bf89) Thanks [@kumixio](https://github.com/kumixio)! - Update peer dependencies and dev dependencies for `nodemailer`, `react`, `react-email`, and `resend`
+
 ## 0.1.2
 
 ### Patch Changes

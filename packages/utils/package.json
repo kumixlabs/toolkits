@@ -50,7 +50,7 @@
     "@sindresorhus/slugify": "^3.0.1",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/ms": "^2.1.0",
-    "@types/node": "^26.6.1",
+    "@types/node": "^26.6.2",
     "bcryptjs": "^3.0.3",
     "chrono-node": "^2.10.1",
     "cn": "^0.3.0",

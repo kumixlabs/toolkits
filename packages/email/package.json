@@ -53,13 +53,13 @@
   ],
   "devDependencies": {
     "@kumix/tsconfig": "^0.1.0",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.3",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.3.0",
-    "nodemailer": "^10.0.10",
+    "nodemailer": "^10.0.12",
     "react": "^19.3.0",
     "react-email": "^6.11.0",
-    "resend": "^6.28.1",
+    "resend": "^6.30.0",
     "tsdown": "^0.23.0",
     "typescript": "catalog:"
   },

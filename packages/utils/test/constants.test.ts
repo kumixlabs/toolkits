@@ -43,7 +43,7 @@ describe("Constants", () => {
     it("should expose env constants with expected defaults", () => {
       expect(
         NEXT_PUBLIC_RECAPTCHA_SITE_KEY === undefined ||
-          typeof NEXT_PUBLIC_RECAPTCHA_SITE_KEY === "string",
+        typeof NEXT_PUBLIC_RECAPTCHA_SITE_KEY === "string",
       ).toBe(true);
       expect(RECAPTCHA_SECRET_KEY === undefined || typeof RECAPTCHA_SECRET_KEY === "string").toBe(
         true,

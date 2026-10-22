@@ -30,7 +30,7 @@ describe("Logging", () => {
     process.env.SLACK_WEBHOOKS_HOOK_ALERTS = "https://example.com/webhook";
     const mod = await import("../../src/index");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
-    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => { });
     await mod.SlackLog({ message: "error-case", type: "alerts" });
     expect(fetchSpy).toHaveBeenCalled();
     expect(logSpy).toHaveBeenCalled();
@@ -54,7 +54,7 @@ describe("Logging", () => {
     process.env.NODE_ENV = "development";
     const mod = await import("../../src/index");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true } as any);
-    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => { });
     await mod.SlackLog({ message: "dev", type: "alerts" });
     expect(logSpy).toHaveBeenCalledWith("dev");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -120,7 +120,7 @@ describe("Logging", () => {
     process.env.SLACK_WEBHOOKS_HOOK_SUBSCRIBERS = "https://example.com/s";
     process.env.SLACK_WEBHOOKS_HOOK_ERRORS = "https://example.com/e";
     const mod = await import("../../src/index");
-    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(mod.logger, "log").mockImplementation(() => { });
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true } as any);
     await mod.SlackLog({ message: "all-set", type: "alerts" });
     expect(logSpy).not.toHaveBeenCalled();

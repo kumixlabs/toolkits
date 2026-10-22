@@ -38,7 +38,7 @@ describe("HTTP", () => {
 
   it("fetchWithTimeout should reject on timeout", async () => {
     vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => {}));
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => { }));
     const p = fetchWithTimeout("/slow", undefined, 100);
     vi.advanceTimersByTime(100);
     await expect(p).rejects.toThrow("Request timed out");

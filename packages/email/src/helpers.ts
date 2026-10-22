@@ -594,7 +594,7 @@ export function formatFileSize(bytes: number, decimals: number = 2): string {
   if (bytes < 0) return `-${formatFileSize(-bytes, decimals)}`;
 
   const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
+  const dm = Math.max(decimals, 0);
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
 
   // Floor the index (and clamp) so fractional bytes (e.g. 0.5) don't pick a

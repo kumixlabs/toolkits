@@ -83,13 +83,7 @@ getInitials("John Doe"); // "JD"
 ### Date & Time
 
 ```typescript
-import {
-  formatDate,
-  formatDateTime,
-  formatTime,
-  timeAgo,
-  getDateTimeLocal,
-} from "@kumix/utils";
+import { formatDate, formatDateTime, formatTime, timeAgo, getDateTimeLocal } from "@kumix/utils";
 
 // Examples
 formatDate(new Date()); // "November 26, 2025"
@@ -139,12 +133,7 @@ await hashStringSHA256("secret"); // "2bb80d537b1da3e3..."
 ### URL Utilities
 
 ```typescript
-import {
-  constructMetadata,
-  getUrlFromString,
-  isValidUrl,
-  getDomainWithoutWWW,
-} from "@kumix/utils";
+import { constructMetadata, getUrlFromString, isValidUrl, getDomainWithoutWWW } from "@kumix/utils";
 
 // Build metadata for SEO
 const metadata = constructMetadata({

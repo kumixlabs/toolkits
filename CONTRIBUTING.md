@@ -9,7 +9,6 @@ This project and everyone participating in it is governed by our [Code of Conduc
 ## Why Contribute?
 
 Kumix Toolkits is a community-driven collection of packages that standardize common SaaS capabilities. Your contributions help:
-
 - Improve email templates and delivery providers
 - Enhance storage abstractions and provider integrations
 - Expand and refine shared utility functions
@@ -28,15 +27,18 @@ Kumix Toolkits is a community-driven collection of packages that standardize com
 
 1. Fork the repository on GitHub
 2. Clone your fork locally:
+
    ```bash
    git clone https://github.com/kumixlabs/toolkits.git
    cd toolkits
    ```
 3. Install dependencies:
+
    ```bash
    bun install
    ```
 4. Create a new branch for your changes:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -110,7 +112,6 @@ bun run lint      # Lint only
 ### Branch Naming
 
 Use descriptive branch names:
-
 - `feature/add-email-template` - For new features
 - `fix/s3-upload-error` - For bug fixes
 - `docs/update-readme` - For documentation
@@ -131,7 +132,6 @@ test(utils): add SECURE capitalization tests
 **Format**: `type(scope): description`
 
 **Types**:
-
 - `feat`: New feature (also `feature`)
 - `fix`: Bug fix
 - `refactor`: Code refactoring
@@ -168,7 +168,6 @@ bun run format
 ```
 
 Make sure:
-
 - All TypeScript types are correct
 - No build errors or warnings
 - Code follows the style guide
@@ -244,7 +243,6 @@ packages/your-package/
 ### Publishing Packages (Maintainers Only)
 
 This project uses [Changesets](https://github.com/changesets/changesets) for version management:
-
 1. **Create a changeset**:
 
    ```bash
@@ -278,7 +276,6 @@ If you discover a security vulnerability within Kumix Toolkits, please send an e
 ## Questions and Support
 
 If you have questions or need help:
-
 - Check the [documentation](./README.md) and package READMEs
 - Search [existing issues](https://github.com/kumixlabs/toolkits/issues) and [discussions](https://github.com/kumixlabs/toolkits/discussions)
 - Open a new [discussion](https://github.com/kumixlabs/toolkits/discussions) for questions

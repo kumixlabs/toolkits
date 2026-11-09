@@ -5,6 +5,7 @@ MCP server for exploring Kumix Toolkits packages, utilities, and documentation.
 ## Overview
 
 This MCP server provides access to:
+
 - **3 packages** in the Kumix Toolkits
 - **Utility discovery** and search
 - **Source code reading** for development
@@ -74,6 +75,7 @@ Add the MCP server to your MCP client configuration:
 ### Path Guidelines
 
 **Finding the Correct Paths:**
+
 1. **Path to `dist/index.js`**: The `args` array must contain the absolute path to the compiled MCP server
 2. **Working Directory (`cwd`)**: Should point to the repository root where `packages/` is located
 
@@ -100,6 +102,7 @@ Add the MCP server to your MCP client configuration:
 ```
 
 **Important Notes:**
+
 - Use absolute paths (not relative paths)
 - Paths must point to the **built** files in `dist/`, not source files
 - The server must be built first: `cd packages/mcp && bun run build`
@@ -112,6 +115,7 @@ Add the MCP server to your MCP client configuration:
 Lists all available packages in the toolkits.
 
 **Parameters:**
+
 - `category` (optional): Filter by "email", "storage", "utils", or "all" (default: "all")
 
 **Example Prompts:**
@@ -128,6 +132,7 @@ Show me the utils package.
 Gets detailed information about a specific package.
 
 **Parameters:**
+
 - `package_name` (required): Full package name (e.g., "@kumix/email")
 
 **Example Prompts:**
@@ -143,6 +148,7 @@ Show me details for @kumix/utils.
 Searches for components across all packages.
 
 **Parameters:**
+
 - `component_name` (required): Name to search for
 - `package_filter` (optional): Filter by package name
 
@@ -160,6 +166,7 @@ Find the resizeImage utility in the utils package.
 Reads the source code of a specific component.
 
 **Parameters:**
+
 - `package_name` (required): Package containing the component
 - `component_path` (required): Relative path from the package's src/ directory
 
@@ -176,6 +183,7 @@ Show me the slugify implementation in the utils package.
 Gets usage examples for packages or components.
 
 **Parameters:**
+
 - `package_name` (required): Package name
 - `component_name` (optional): Specific component name
 
@@ -192,6 +200,7 @@ Show me examples for the utils package.
 ### Exploring Packages
 
 Use the tools to discover and explore available packages:
+
 - List all packages with `list_packages`
 - Get detailed information with `get_package_info`
 - Find specific components with `find_component`
@@ -304,6 +313,7 @@ packages/
 ```
 
 Each package contains:
+
 - `src/` - Source code directory
 - `package.json` - Package metadata
 - TypeScript utilities and functions
